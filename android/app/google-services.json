@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "765033234298",
+    "project_id": "chitzy-7ce77",
+    "storage_bucket": "chitzy-7ce77.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:765033234298:android:553d10c9949f557d5020c3",
+        "android_client_info": {
+          "package_name": "chatzy.com"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCthQW9nFakUWC__8rlOqiyGou-_kJgM80"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

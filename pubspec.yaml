@@ -1,0 +1,59 @@
+name: chat_app
+description: Professional Flutter chat application with AI features and animated characters.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.5.4
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  google_fonts: ^6.1.0
+  flutter_animate: ^4.3.0
+  cached_network_image: ^3.3.1
+  shimmer: ^3.0.0
+  flutter_staggered_animations: ^1.1.1
+  lottie: ^3.1.0
+  provider: ^6.1.1
+  intl: ^0.19.0
+  media_kit: ^1.1.10+1
+  media_kit_video: ^1.2.4
+  media_kit_libs_windows_video: ^1.0.9
+  media_kit_libs_android_video: ^1.0.8
+  google_generative_ai: ^0.4.7
+  flutter_cube: ^0.1.1
+  o3d: ^3.1.3
+  webview_flutter: ^4.4.1
+  webview_windows: 0.4.0
+  webview_win_floating: ^3.0.2
+  file_picker: ^10.3.10
+  firebase_core: ^4.5.0
+  firebase_auth: ^6.2.0
+  cloud_firestore: ^6.1.3
+  firebase_storage: ^13.1.0
+  sqflite: ^2.4.1
+  path: ^1.9.1
+  shared_preferences: ^2.3.5
+  sqflite_common_ffi: ^2.3.3
+  record: ^6.2.0
+  audioplayers: ^6.1.0
+  path_provider: ^2.1.2
+  image_picker: ^1.1.2
+  device_info_plus: ^10.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+  
+  assets:
+    - assets/images/
+    - assets/animations/
+    - assets/models/
+    - assets/huggy_wuggy.glb
+    - assets/huggy_wuggy_projectplaytime.glb

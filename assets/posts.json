@@ -1,0 +1,38 @@
+[
+    {
+        "id": 1,
+        "title": "Foundation Work Complete",
+        "body": "We just completed the foundation work for our largest commercial project. The team worked tirelessly to deliver on time.",
+        "imageUrl": "https://picsum.photos/seed/construction1/600/400"
+    },
+    {
+        "id": 2,
+        "title": "New Tower Breaks Ground",
+        "body": "Our latest residential tower broke ground today in downtown. This 40-floor structure will redefine the city skyline.",
+        "imageUrl": "https://picsum.photos/seed/building2/600/400"
+    },
+    {
+        "id": 3,
+        "title": "Historic Bridge Renovation",
+        "body": "Renovation of the historic bridge is now complete. We preserved the original structure while modernizing safety elements.",
+        "imageUrl": "https://picsum.photos/seed/bridge3/600/400"
+    },
+    {
+        "id": 4,
+        "title": "Safety Training Completed",
+        "body": "Safety first! Our team completed their quarterly safety training with zero incidents recorded this month.",
+        "imageUrl": "https://picsum.photos/seed/safety4/600/400"
+    },
+    {
+        "id": 5,
+        "title": "Sports Complex 70% Done",
+        "body": "The new sports complex infrastructure is 70% complete. Concrete pouring for the main arena was finished ahead of schedule.",
+        "imageUrl": "https://picsum.photos/seed/sports5/600/400"
+    },
+    {
+        "id": 6,
+        "title": "New Hospital Project Announced",
+        "body": "We are proud to announce our newest project: a state-of-the-art hospital complex spanning 150,000 square meters.",
+        "imageUrl": "https://picsum.photos/seed/hospital6/600/400"
+    }
+]
