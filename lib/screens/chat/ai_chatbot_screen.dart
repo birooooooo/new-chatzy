@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
+import 'dart:async';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
@@ -17,22 +18,80 @@ class AiChatbotScreen extends StatefulWidget {
 class _AiChatbotScreenState extends State<AiChatbotScreen> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  final FocusNode _focusNode = FocusNode();
   final AiService _aiService = AiService();
   bool _isTyping = false;
 
-  final List<String> _quickPrompts = [
-    '💡 Suggest a reply',
-    '🌍 Translate message',
-    '✍️ Improve my writing',
-    '📝 Summarize chat',
+  // Welcome Animation State
+  String _welcomeText = "";
+  int _currentMessageIndex = 0;
+  int _currentCharIndex = 0;
+  bool _isDeleting = false;
+  Timer? _welcomeTimer;
+
+  final List<String> _welcomeMessages = [
+    "Welcome to Chatzy AI!",
+    "How can I help you today?",
+    "Ask me anything!"
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _startWelcomeAnimation();
+  }
+
+  @override
+  void dispose() {
+    _welcomeTimer?.cancel();
+    _focusNode.dispose();
+    _controller.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _startWelcomeAnimation() {
+    // Faster speed for "wiring and editing" feel
+    _welcomeTimer = Timer.periodic(const Duration(milliseconds: 50), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      _updateWelcomeText();
+    });
+  }
+
+  void _updateWelcomeText() {
+    final String fullText = _welcomeMessages[_currentMessageIndex];
+    
+    setState(() {
+      if (!_isDeleting) {
+        if (_currentCharIndex < fullText.length) {
+          _currentCharIndex++;
+        } else {
+          _isDeleting = true;
+          _welcomeTimer?.cancel();
+          Future.delayed(const Duration(seconds: 1), () {
+            if (mounted) _startWelcomeAnimation();
+          });
+        }
+      } else {
+        if (_currentCharIndex > 0) {
+          _currentCharIndex -= 2; // Delete faster
+          if (_currentCharIndex < 0) _currentCharIndex = 0;
+        } else {
+          _isDeleting = false;
+          _currentMessageIndex = (_currentMessageIndex + 1) % _welcomeMessages.length;
+        }
+      }
+      _welcomeText = fullText.substring(0, _currentCharIndex);
+    });
+  }
 
   void _sendMessage(String text) {
     if (text.trim().isEmpty) return;
 
     final chatProvider = Provider.of<ChatProvider>(context, listen: false);
-    
-    // Add user message to provider
     chatProvider.addMessage('ai_chatbot', text);
     
     _controller.clear();
@@ -42,11 +101,9 @@ class _AiChatbotScreenState extends State<AiChatbotScreen> {
       _isTyping = true;
     });
 
-    // Get context from other chats
     final contextHistory = chatProvider.getAllChatsContext();
     final history = chatProvider.getMessages('ai_chatbot');
 
-    // Get real AI response
     _aiService.getChatResponse(text, history, contextHistory).then((response) {
       if (mounted) {
         chatProvider.addMessage('ai_chatbot', response, senderId: 'ai_chatbot');
@@ -80,84 +137,31 @@ class _AiChatbotScreenState extends State<AiChatbotScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        // Header
-        _buildHeader(),
-        
-        // Messages or empty state
-        Expanded(
-          child: Consumer<ChatProvider>(
-            builder: (context, chatProvider, child) {
-              final messages = chatProvider.getMessages('ai_chatbot');
-              return messages.isEmpty ? _buildEmptyState() : _buildMessages(messages);
-            },
-          ),
-        ),
-        
-        // Typing indicator
-        if (_isTyping)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-            child: Row(
-              children: [
-                Container(
-                  width: 24,
-                  height: 24,
-                  decoration: BoxDecoration(
-                    gradient: AppTheme.blueGradient,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(Icons.smart_toy_rounded, size: 14, color: Colors.white),
-                ),
-                const SizedBox(width: 12),
-                Text('AI is thinking...', style: TextStyle(color: Colors.white.withOpacity(0.5))),
-              ],
-            ),
-          ),
-        
-        // Input
-        _buildInput(),
-      ],
-    );
-  }
-
-  Widget _buildHeader() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      child: Row(
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: Stack(
         children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              gradient: AppTheme.blueGradient,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: AppTheme.secondary.withOpacity(0.3),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
+          Column(
+            children: [
+              _buildHeader(),
+              Expanded(
+                child: Consumer<ChatProvider>(
+                  builder: (context, chatProvider, child) {
+                    final messages = chatProvider.getMessages('ai_chatbot');
+                    if (messages.isEmpty) return _buildEmptyState();
+                    return _buildMessages(messages);
+                  },
                 ),
-              ],
-            ),
-            child: const Icon(Icons.smart_toy_rounded, color: Colors.white, size: 26),
+              ),
+              if (_isTyping) _buildTypingIndicator(),
+              const SizedBox(height: 100), // Height of docked input
+            ],
           ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'CHATZY AI',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 1),
-                ),
-                Text(
-                  'Your intelligent assistant',
-                  style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 13),
-                ),
-              ],
-            ),
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: _buildInput(),
           ),
         ],
       ),
@@ -166,72 +170,57 @@ class _AiChatbotScreenState extends State<AiChatbotScreen> {
 
   Widget _buildEmptyState() {
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(40),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    AppTheme.secondary.withOpacity(0.2),
-                    Colors.purple.withOpacity(0.2),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(30),
-                border: Border.all(color: Colors.white.withOpacity(0.1)),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(30),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                  child: Icon(Icons.smart_toy_rounded, size: 50, color: AppTheme.secondary),
-                ),
-              ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            _welcomeText,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.w300,
+              color: Theme.of(context).colorScheme.onSurface,
+              letterSpacing: 1.2,
             ),
-            const SizedBox(height: 24),
-            const Text(
-              'How can I help you?',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 10),
+          Container(
+            width: 2,
+            height: 28,
+            color: AppTheme.secondary.withOpacity(0.5),
+          ).animate(onPlay: (c) => c.repeat())
+           .fadeIn(duration: 400.ms)
+           .fadeOut(duration: 400.ms),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 60, 20, 10),
+      alignment: Alignment.centerLeft,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'CHATZY AI',
+            style: TextStyle(
+              fontSize: 24, 
+              fontWeight: FontWeight.bold, 
+              letterSpacing: 1.5,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Ask me anything or try a quick action',
-              style: TextStyle(color: Colors.white.withOpacity(0.5)),
+          ),
+          Text(
+            'powered by Gemini',
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4), 
+              fontSize: 11,
+              fontStyle: FontStyle.italic,
             ),
-            const SizedBox(height: 32),
-            
-            // Quick prompts
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: _quickPrompts.map((prompt) {
-                return GestureDetector(
-                  onTap: () => _sendMessage(prompt),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          Colors.white.withOpacity(0.1),
-                          Colors.white.withOpacity(0.05),
-                        ],
-                      ),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.white.withOpacity(0.15)),
-                    ),
-                    child: Text(prompt, style: const TextStyle(fontSize: 14)),
-                  ),
-                ).animate()
-                    .fadeIn(delay: Duration(milliseconds: 100 * _quickPrompts.indexOf(prompt)))
-                    .scale(begin: const Offset(0.9, 0.9), end: const Offset(1, 1));
-              }).toList(),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -239,106 +228,112 @@ class _AiChatbotScreenState extends State<AiChatbotScreen> {
   Widget _buildMessages(List<MessageModel> messages) {
     return ListView.builder(
       controller: _scrollController,
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 180), // Extra padding for input bar + nav bar
+      padding: const EdgeInsets.symmetric(horizontal: 20),
       itemCount: messages.length,
       itemBuilder: (context, index) {
-        // AI screen usually shows latest at top or bottom? 
-        // Existing code: index 0 is first message.
-        // My provider: insert(0) means latest is index 0.
-        // To match existing look (scrolling down), we should reverse the list or use reverse: true.
-        // Existing code didn't use reverse: true but scrolled to bottom.
-        
-        final msg = messages[messages.length - 1 - index]; // Show in order
+        final msg = messages[messages.length - 1 - index];
         final isMe = msg.senderId == 'me';
         
         return Align(
           alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
           child: Container(
-            margin: EdgeInsets.only(
-              bottom: 12,
-              left: isMe ? 60 : 0,
-              right: isMe ? 0 : 60,
-            ),
+            margin: const EdgeInsets.only(bottom: 12),
             padding: const EdgeInsets.all(14),
+            constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
             decoration: BoxDecoration(
-              gradient: isMe
-                  ? AppTheme.blueGradient
-                  : LinearGradient(
-                      colors: [
-                        Colors.white.withOpacity(0.1),
-                        Colors.white.withOpacity(0.05),
-                      ],
-                    ),
+              gradient: isMe ? AppTheme.blueGradient : null,
+              color: isMe ? null : Colors.white.withOpacity(0.08),
               borderRadius: BorderRadius.only(
-                topLeft: const Radius.circular(18),
-                topRight: const Radius.circular(18),
-                bottomLeft: Radius.circular(isMe ? 18 : 4),
-                bottomRight: Radius.circular(isMe ? 4 : 18),
+                topLeft: const Radius.circular(20),
+                topRight: const Radius.circular(20),
+                bottomLeft: Radius.circular(isMe ? 20 : 4),
+                bottomRight: Radius.circular(isMe ? 4 : 20),
               ),
-              border: isMe ? null : Border.all(color: Colors.white.withOpacity(0.1)),
             ),
-            child: Text(msg.content, style: const TextStyle(fontSize: 15)),
+            child: Text(
+              msg.content, 
+              style: TextStyle(
+                fontSize: 15,
+                color: isMe ? Colors.white : Theme.of(context).colorScheme.onSurface,
+              ),
+            ),
           ),
-        ).animate()
-            .fadeIn(duration: 200.ms)
-            .slideX(begin: isMe ? 0.1 : -0.1, end: 0);
+        ).animate().fadeIn(duration: 200.ms).slideX(begin: isMe ? 0.1 : -0.1);
       },
+    );
+  }
+
+  Widget _buildTypingIndicator() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.05),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              'AI is thinking...', 
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildInput() {
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 110), // Positioned above the glass nav bar
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 0), // ZERO bottom space
+      decoration: const BoxDecoration(
+        color: Colors.transparent, // Transparent for mesh visibility
+      ),
       child: Row(
         children: [
           Expanded(
             child: Container(
+              margin: const EdgeInsets.only(bottom: 8),
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Colors.white.withOpacity(0.1),
-                    Colors.white.withOpacity(0.05),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: Colors.white.withOpacity(0.15)),
+                color: Colors.transparent, // Fully transparent inner box
+                borderRadius: BorderRadius.circular(28),
+                border: Border.all(color: Colors.white.withOpacity(0.15)), // Slightly more contrast
               ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(24),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                  child: TextField(
-                    controller: _controller,
-                    decoration: InputDecoration(
-                      hintText: 'Ask AI anything...',
-                      hintStyle: TextStyle(color: Colors.white.withOpacity(0.4)),
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                    ),
-                    onSubmitted: _sendMessage,
+              child: TextField(
+                focusNode: _focusNode,
+                controller: _controller,
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                decoration: InputDecoration(
+                  hintText: 'Ask AI anything...',
+                  hintStyle: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
+                    fontSize: 14,
                   ),
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                 ),
+                onSubmitted: _sendMessage,
               ),
             ),
           ),
           const SizedBox(width: 12),
-          GestureDetector(
-            onTap: () => _sendMessage(_controller.text),
-            child: Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                gradient: AppTheme.blueGradient,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: AppTheme.secondary.withOpacity(0.3),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: GestureDetector(
+              onTap: () => _sendMessage(_controller.text),
+              child: Container(
+                width: 52,
+                height: 52,
+                decoration: const BoxDecoration(
+                  gradient: AppTheme.blueGradient,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.send_rounded, color: Colors.white, size: 24),
               ),
-              child: const Icon(Icons.send_rounded, color: Colors.white, size: 22),
             ),
           ),
         ],

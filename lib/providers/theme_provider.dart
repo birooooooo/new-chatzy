@@ -6,10 +6,11 @@ enum BackgroundStyle {
   oceanMist,
   cyberPurple,
   glassMesh,
+  pureWhite,
 }
 
 class ThemeProvider extends ChangeNotifier {
-  BackgroundStyle _backgroundStyle = BackgroundStyle.deepBlack;
+  BackgroundStyle _backgroundStyle = BackgroundStyle.glassMesh;
 
   BackgroundStyle get backgroundStyle => _backgroundStyle;
 
@@ -19,6 +20,10 @@ class ThemeProvider extends ChangeNotifier {
       notifyListeners();
     }
   }
+
+  /// True when the active theme has a light/white background.
+  /// Use this to swap text and icon colours from white to dark.
+  bool get isLightTheme => _backgroundStyle == BackgroundStyle.pureWhite;
 
   Decoration get backgroundDecoration {
     switch (_backgroundStyle) {
@@ -59,6 +64,14 @@ class ThemeProvider extends ChangeNotifier {
               Color(0xFF020617),
             ],
             stops: [0.0, 0.4, 1.0],
+          ),
+        );
+      case BackgroundStyle.pureWhite:
+        return const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFFFFFFFF), Color(0xFFF0F4FF)],
           ),
         );
     }

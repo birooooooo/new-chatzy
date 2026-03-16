@@ -156,7 +156,7 @@ class SettingsScreen extends StatelessWidget {
                   child: Text(
                     'CHATZY v1.0.0',
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.3),
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
                       fontSize: 12,
                     ),
                   ),
@@ -255,7 +255,7 @@ class _BackgroundSelector extends StatelessWidget {
         Text(
           'Background Style',
           style: TextStyle(
-            color: Colors.white.withOpacity(0.5),
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
             fontSize: 13,
             fontWeight: FontWeight.w600,
           ),
@@ -272,6 +272,7 @@ class _BackgroundSelector extends StatelessWidget {
               _buildOption(context, themeProvider, BackgroundStyle.oceanMist, 'Ocean'),
               _buildOption(context, themeProvider, BackgroundStyle.cyberPurple, 'Cyber'),
               _buildOption(context, themeProvider, BackgroundStyle.glassMesh, 'Glass Mesh'),
+              _buildOption(context, themeProvider, BackgroundStyle.pureWhite, 'Pure White'),
             ],
           ),
         ),
@@ -318,7 +319,11 @@ class _BackgroundSelector extends StatelessWidget {
             Text(
               label,
               style: TextStyle(
-                color: isSelected ? Colors.white : Colors.white.withOpacity(0.5),
+                color: isSelected
+                    ? (style == BackgroundStyle.pureWhite
+                        ? const Color(0xFF1E293B)
+                        : Colors.white)
+                    : Colors.white.withOpacity(0.5),
                 fontSize: 11,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
               ),
@@ -357,6 +362,12 @@ class _BackgroundSelector extends StatelessWidget {
             colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
           ),
         );
+      case BackgroundStyle.pureWhite:
+        return const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFFFFFFFF), Color(0xFFF0F4FF)],
+          ),
+        );
     }
   }
 }
@@ -375,7 +386,7 @@ class _SettingsSection extends StatelessWidget {
         Text(
           title,
           style: TextStyle(
-            color: Colors.white.withOpacity(0.5),
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
             fontSize: 13,
             fontWeight: FontWeight.w600,
           ),
@@ -396,7 +407,7 @@ class _SettingsSection extends StatelessWidget {
                     Divider(
                       height: 1,
                       indent: 60,
-                      color: Colors.white.withOpacity(0.05),
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.06),
                     ),
                 ],
               );
@@ -439,9 +450,9 @@ class _SettingsItem extends StatelessWidget {
       title: Text(title, style: const TextStyle(fontWeight: FontWeight.w500)),
       subtitle: Text(
         subtitle,
-        style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 12),
+        style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4), fontSize: 12),
       ),
-      trailing: Icon(Icons.chevron_right, color: Colors.white.withOpacity(0.3), size: 20),
+      trailing: Icon(Icons.chevron_right, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3), size: 20),
     );
   }
 }

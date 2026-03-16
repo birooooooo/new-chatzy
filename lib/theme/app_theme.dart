@@ -91,7 +91,7 @@ class AppTheme {
       colorScheme: const ColorScheme.dark(
         primary: secondary,
         secondary: accent,
-        surface: background, // Default surface is black, widgets use glass
+        surface: background,
         onPrimary: Colors.white,
         onSurface: textPrimary,
       ),
@@ -99,10 +99,10 @@ class AppTheme {
       appBarTheme: AppBarTheme(
         elevation: 0,
         centerTitle: true,
-        backgroundColor: Colors.transparent, // Glass AppBar
+        backgroundColor: Colors.transparent,
         foregroundColor: textPrimary,
         systemOverlayStyle: SystemUiOverlayStyle.light,
-        titleTextStyle: GoogleFonts.outfit( // Modern font
+        titleTextStyle: GoogleFonts.outfit(
           fontSize: 18,
           fontWeight: FontWeight.w600,
           color: textPrimary,
@@ -112,37 +112,69 @@ class AppTheme {
       ),
       
       textTheme: TextTheme(
-        bodyLarge: GoogleFonts.outfit(
-          fontSize: 16,
-          fontWeight: FontWeight.normal,
-          color: textPrimary,
-        ),
-        bodyMedium: GoogleFonts.outfit(
-          fontSize: 14,
-          fontWeight: FontWeight.normal,
-          color: textSecondary,
-        ),
-        bodySmall: GoogleFonts.outfit(
-          fontSize: 12,
-          fontWeight: FontWeight.normal,
-          color: textLight,
-        ),
-        displaySmall: GoogleFonts.outfit(
-          fontSize: 32,
-          fontWeight: FontWeight.bold,
-          color: textPrimary,
-        ),
-        headlineMedium: GoogleFonts.outfit(
-          fontSize: 24,
-          fontWeight: FontWeight.bold,
-          color: textPrimary,
-        ),
-        labelLarge: GoogleFonts.outfit(
-          fontSize: 16,
-          fontWeight: FontWeight.w600,
-          color: textPrimary,
-        ),
+        bodyLarge: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.normal, color: textPrimary),
+        bodyMedium: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.normal, color: textSecondary),
+        bodySmall: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.normal, color: textLight),
+        displaySmall: GoogleFonts.outfit(fontSize: 32, fontWeight: FontWeight.bold, color: textPrimary),
+        headlineMedium: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold, color: textPrimary),
+        labelLarge: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w600, color: textPrimary),
       ),
+    );
+  }
+
+  // Light text colors for the white theme
+  static const Color lightTextPrimary   = Color(0xFF1C1C1E);   // Near black
+  static const Color lightTextSecondary = Color(0xFF3A3A3C);   // Dark gray
+  static const Color lightTextLight     = Color(0xFF6E6E73);   // Medium gray
+
+  static ThemeData get lightTheme {
+    return ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.light,
+      primaryColor: secondary,
+      scaffoldBackgroundColor: const Color(0xFFFFFFFF),
+      canvasColor: const Color(0xFFFFFFFF),
+
+      colorScheme: const ColorScheme.light(
+        primary: secondary,
+        secondary: accent,
+        surface: Color(0xFFF2F2F7),
+        onPrimary: Colors.white,
+        onSurface: lightTextPrimary,
+      ),
+
+      appBarTheme: AppBarTheme(
+        elevation: 0,
+        centerTitle: true,
+        backgroundColor: Colors.transparent,
+        foregroundColor: lightTextPrimary,
+        systemOverlayStyle: SystemUiOverlayStyle.dark,
+        titleTextStyle: GoogleFonts.outfit(
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
+          color: lightTextPrimary,
+          letterSpacing: 0.5,
+        ),
+        iconTheme: const IconThemeData(color: lightTextPrimary),
+      ),
+
+      textTheme: TextTheme(
+        bodyLarge: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.normal, color: lightTextPrimary),
+        bodyMedium: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.normal, color: lightTextSecondary),
+        bodySmall: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.normal, color: lightTextLight),
+        displaySmall: GoogleFonts.outfit(fontSize: 32, fontWeight: FontWeight.bold, color: lightTextPrimary),
+        headlineMedium: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold, color: lightTextPrimary),
+        labelLarge: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w600, color: lightTextPrimary),
+      ),
+
+      listTileTheme: const ListTileThemeData(
+        iconColor: lightTextPrimary,
+        textColor: lightTextPrimary,
+      ),
+
+      iconTheme: const IconThemeData(color: lightTextPrimary),
+
+      dividerColor: Color(0xFFD1D1D6),
     );
   }
 }

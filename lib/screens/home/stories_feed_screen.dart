@@ -87,12 +87,12 @@ class _StoriesFeedScreenState extends State<StoriesFeedScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
+                  Text(
                     'Stories',
                     style: TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                   _buildAddStoryButton(),
@@ -148,18 +148,18 @@ class _StoriesFeedScreenState extends State<StoriesFeedScreen> {
                   child: Icon(
                     Icons.auto_stories_outlined,
                     size: 40,
-                    color: Colors.white.withOpacity(0.15),
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.15),
                   ),
                 ).animate()
                   .scale(duration: 600.ms, curve: Curves.easeOutBack)
                   .fadeIn(),
                 const SizedBox(height: 24),
-                const Text(
+                Text(
                   'Keep up with friends',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ).animate().fadeIn(delay: 200.ms),
                 const SizedBox(height: 8),
@@ -169,7 +169,7 @@ class _StoriesFeedScreenState extends State<StoriesFeedScreen> {
                     'Stories from your friends will appear here once they post something new.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.4),
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
                       fontSize: 13,
                       height: 1.5,
                     ),
@@ -183,9 +183,13 @@ class _StoriesFeedScreenState extends State<StoriesFeedScreen> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Recent Stories',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontSize: 18, 
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
             ).animate().fadeIn(delay: 100.ms),
             const SizedBox(height: 16),
             GridView.builder(
@@ -280,9 +284,13 @@ class _StoriesFeedScreenState extends State<StoriesFeedScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'My Story',
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600, 
+                      fontSize: 16,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
                   ),
                   const SizedBox(height: 2),
                   Text(
@@ -305,7 +313,7 @@ class _StoriesFeedScreenState extends State<StoriesFeedScreen> {
         Text(
           'Muted Stories',
           style: TextStyle(
-            color: Colors.white.withOpacity(0.5),
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
             fontSize: 14,
           ),
         ),

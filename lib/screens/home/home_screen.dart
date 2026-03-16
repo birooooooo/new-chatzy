@@ -49,37 +49,40 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildGlassNavBar() {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+    
     return GlassContainer(
-      margin: EdgeInsets.zero,
-      borderRadius: BorderRadius.zero,
-      blur: 25,
+      height: 65 + bottomPadding,
+      borderRadius: BorderRadius.zero, // Make it perfectly rectangular to connect directly with edges
+      blur: 20,
       gradient: LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [
-          Colors.white.withOpacity(0.10),
-          Colors.white.withOpacity(0.06),
-        ],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: themeProvider.isLightTheme 
+          ? [
+              Colors.white.withOpacity(0.95),
+              Colors.white.withOpacity(0.85),
+            ]
+          : [
+              const Color(0xFF1A1A1A).withOpacity(0.95),
+              const Color(0xFF121212).withOpacity(0.85),
+            ],
       ),
-      border: Border(
-        top: BorderSide(
-          color: Colors.white.withOpacity(0.10),
-          width: 0.5,
-        ),
-      ),
+      border: Border.all(color: Colors.transparent, width: 0), // Explicitly remove all borders
       child: Padding(
         padding: EdgeInsets.only(
+          left: 10, 
+          right: 10, 
           top: 10,
-          bottom: MediaQuery.of(context).padding.bottom + 10,
-          left: 8,
-          right: 8,
+          bottom: bottomPadding > 0 ? bottomPadding : 10, // Adjust for safe area
         ),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
             _buildNavItem(0, Icons.home_outlined, 'Home'),
             _buildNavItem(1, Icons.contact_page_outlined, 'Contacts'),
-            _buildCenterNavItem(),
+            _buildNavItem(2, Icons.psychology_outlined, 'AI Chat'),
             _buildNavItem(3, Icons.auto_stories_outlined, 'Stories'),
             _buildNavItem(4, Icons.person_outline, 'Profile'),
           ],
@@ -90,64 +93,96 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildNavItem(int index, IconData icon, String label) {
     final isSelected = _currentIndex == index;
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isAiItem = index == 2;
+    
     return GestureDetector(
       onTap: () => setState(() => _currentIndex = index),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-            child: Icon(
-              icon,
-              color: isSelected ? AppTheme.secondary : Colors.white.withOpacity(0.4),
-              size: 26,
-            ),
-          ),
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            width: isSelected ? 20 : 0,
-            height: 3,
-            decoration: BoxDecoration(
-              color: AppTheme.secondary,
-              borderRadius: BorderRadius.circular(2),
-              boxShadow: isSelected ? [
-                BoxShadow(
-                  color: AppTheme.secondary.withOpacity(0.5),
-                  blurRadius: 8,
-                  offset: const Offset(0, 1),
-                )
-              ] : null,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCenterNavItem() {
-    final isSelected = _currentIndex == 2; // AI Chat
-    return GestureDetector(
-      onTap: () => setState(() => _currentIndex = 2),
-      child: GlassContainer(
-        width: 58,
-        height: 58,
-        borderRadius: BorderRadius.circular(20), // Liquid squircle look
-        gradient: isSelected
-            ? AppTheme.primaryGradient
-            : LinearGradient(
-                colors: [Colors.white.withOpacity(0.15), Colors.white.withOpacity(0.05)],
-              ),
-        border: Border.all(
-          color: Colors.white.withOpacity(isSelected ? 0.25 : 0.08),
-          width: 0.8,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeInOutCubic,
+        padding: EdgeInsets.symmetric(
+          horizontal: isSelected ? (isAiItem ? 12 : 16) : 12,
+          vertical: isSelected ? (isAiItem ? 6 : 8) : 10,
         ),
-        child: const Center(
-          child: Icon(
-            Icons.psychology_outlined,
-            color: Colors.white,
-            size: 28,
-          ),
+        decoration: BoxDecoration(
+          color: isSelected 
+            ? (themeProvider.isLightTheme 
+                ? Colors.black.withOpacity(0.08) 
+                : Colors.white.withOpacity(0.12))
+            : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (isAiItem && isSelected)
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Text(
+                    "AI",
+                    style: TextStyle(
+                      color: themeProvider.isLightTheme ? Colors.black : Colors.white,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
+                      height: 1.1,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                  Text(
+                    "chatzy",
+                    style: TextStyle(
+                      color: themeProvider.isLightTheme 
+                          ? Colors.black.withOpacity(0.6) 
+                          : Colors.white.withOpacity(0.6),
+                      fontWeight: FontWeight.w400,
+                      fontSize: 9,
+                      height: 1.1,
+                    ),
+                  ),
+                ],
+              ).animate().fadeIn(duration: 300.ms).scale(begin: const Offset(0.9, 0.9), end: const Offset(1, 1))
+            else ...[
+              if (isAiItem)
+                Text(
+                  "AI",
+                  style: TextStyle(
+                    color: isSelected 
+                      ? (themeProvider.isLightTheme ? Colors.black : Colors.white)
+                      : (themeProvider.isLightTheme 
+                          ? Colors.black.withOpacity(0.4) 
+                          : Colors.white.withOpacity(0.4)),
+                    fontWeight: FontWeight.w800,
+                    fontSize: 16,
+                    letterSpacing: -0.5,
+                  ),
+                )
+              else
+                Icon(
+                  icon,
+                  color: isSelected 
+                    ? (themeProvider.isLightTheme ? Colors.black : Colors.white)
+                    : (themeProvider.isLightTheme 
+                        ? Colors.black.withOpacity(0.4) 
+                        : Colors.white.withOpacity(0.4)),
+                  size: 24,
+                ),
+              if (isSelected && !isAiItem) ...[
+                const SizedBox(width: 8),
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: themeProvider.isLightTheme ? Colors.black : Colors.white,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
+                ).animate().fadeIn(duration: 300.ms).slideX(begin: -0.2, end: 0),
+              ],
+            ],
+          ],
         ),
       ),
     );

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'dart:async';
 import '../../theme/app_theme.dart';
 import '../chat/chat_screen.dart';
 import '../chat/group_chat_screen.dart';
@@ -27,6 +28,13 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
   final ScrollController _scrollController = ScrollController();
   bool _isSearching = false;
   bool _showStories = false;
+  Timer? _storyHideTimer;
+  // Tracks the story count from the last auto-show so new stories re-trigger it.
+  int _lastSeenStoryCount = 0;
+
+  // Duration constants
+  static const Duration _storyWithContentDuration = Duration(seconds: 30);
+  static const Duration _storyEmptyDuration = Duration(seconds: 3);
 
   @override
   void initState() {
@@ -34,9 +42,43 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
     _scrollController.addListener(_onScroll);
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final storyProvider = Provider.of<StoryProvider>(context);
+    final currentCount = storyProvider.latestPerUser.length;
+
+    // Auto-show only when new stories appear that we haven't shown yet
+    if (currentCount > _lastSeenStoryCount && !_showStories) {
+      _lastSeenStoryCount = currentCount;
+      _showStoriesWith(hasContent: true);
+    } else if (currentCount > _lastSeenStoryCount) {
+      // Update tracker even if already visible
+      _lastSeenStoryCount = currentCount;
+    }
+  }
+
+  /// Shows the stories tray and schedules an auto-hide.
+  /// [hasContent] true  → hide after 30 s
+  ///              false → hide after  3 s
+  void _showStoriesWith({required bool hasContent}) {
+    _storyHideTimer?.cancel();
+    if (mounted) setState(() => _showStories = true);
+    _storyHideTimer = Timer(
+      hasContent ? _storyWithContentDuration : _storyEmptyDuration,
+      () {
+        // Only auto-hide if there are still no new stories (for the 3s case)
+        // or when the 30s timer fires (for the stories case).
+        if (mounted) setState(() => _showStories = false);
+      },
+    );
+  }
+
   void _onScroll() {
     if (_scrollController.offset < -80 && !_showStories) {
-      if (mounted) setState(() => _showStories = true);
+      final storyProvider = Provider.of<StoryProvider>(context, listen: false);
+      final hasStories = storyProvider.latestPerUser.isNotEmpty;
+      _showStoriesWith(hasContent: hasStories);
     }
   }
 
@@ -68,6 +110,9 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
 
   @override
   void dispose() {
+    _storyHideTimer?.cancel();
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -87,7 +132,9 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
             floating: true,
             pinned: true,
             backgroundColor: Colors.transparent,
-            expandedHeight: _isSearching ? 100 : 80,
+            elevation: 0,
+            expandedHeight: _isSearching ? 140 : 80, // Increased to prevent overflow
+            toolbarHeight: 70,
             flexibleSpace: FlexibleSpaceBar(
               background: Padding(
                 padding: EdgeInsets.only(
@@ -96,6 +143,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                   right: 20,
                 ),
                 child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
@@ -106,53 +154,73 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                             fontWeight: FontWeight.bold,
                             letterSpacing: 1.0,
-                            color: Colors.white,
                           ),
                         ),
-                        Row(
-                          children: [
-                            IconButton(
-                              icon: Icon(
-                                _isSearching ? Icons.close : Icons.search_rounded,
-                              ),
-                              onPressed: () {
-                                setState(() {
-                                  _isSearching = !_isSearching;
-                                  if (!_isSearching) _searchController.clear();
-                                });
-                              },
+                        // Animated Search Button (Nav-style)
+                        GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _isSearching = !_isSearching;
+                              if (!_isSearching) _searchController.clear();
+                            });
+                          },
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 400),
+                            curve: Curves.easeInOutCubic,
+                            padding: EdgeInsets.symmetric(
+                              horizontal: _isSearching ? 14 : 10,
+                              vertical: 8,
                             ),
-                            IconButton(
-                              icon: const Icon(Icons.edit_rounded),
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(builder: (context) => ContactsScreen()),
-                                );
-                              },
+                            decoration: BoxDecoration(
+                              color: _isSearching 
+                                ? (Theme.of(context).brightness == Brightness.light 
+                                    ? Colors.black.withOpacity(0.08) 
+                                    : Colors.white.withOpacity(0.12))
+                                : Colors.transparent,
+                              borderRadius: BorderRadius.circular(20),
                             ),
-                          ],
+                            child: Icon(
+                              _isSearching ? Icons.close : Icons.search_rounded,
+                              size: 24,
+                            ),
+                          ),
                         ),
                       ],
                     ),
                     if (_isSearching)
                       Container(
-                        margin: const EdgeInsets.only(top: 8),
+                        margin: const EdgeInsets.only(top: 15),
                         padding: const EdgeInsets.symmetric(horizontal: 16),
+                        height: 50,
                         decoration: BoxDecoration(
-                          color: AppTheme.surface,
-                          borderRadius: BorderRadius.circular(12),
+                          color: Theme.of(context).colorScheme.surface.withOpacity(
+                            Theme.of(context).brightness == Brightness.light ? 1.0 : 0.15,
+                          ),
+                          borderRadius: BorderRadius.circular(15),
+                          border: Border.all(
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.1),
+                          ),
                         ),
                         child: TextField(
                           controller: _searchController,
+                          autofocus: true,
+                          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                           onChanged: (_) => setState(() {}),
-                          decoration: const InputDecoration(
+                          decoration: InputDecoration(
                             hintText: 'Search chats...',
+                            hintStyle: TextStyle(
+                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+                              fontSize: 15,
+                            ),
                             border: InputBorder.none,
-                            icon: Icon(Icons.search, color: AppTheme.textLight),
+                            icon: Icon(
+                              Icons.search, 
+                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                              size: 20,
+                            ),
                           ),
                         ),
-                      ),
+                      ).animate().fadeIn(duration: 200.ms).slideY(begin: -0.1, end: 0),
                   ],
                 ),
               ),
@@ -177,11 +245,11 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
           // Chats List Header
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(24, 24, 24, 12),
+              padding: const EdgeInsets.fromLTRB(24, 8, 24, 12),
               child: Text(
                 'Recent Messages',
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.5),
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                   letterSpacing: 0.5,
@@ -226,7 +294,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                         ).animate().fadeIn(delay: 200.ms),
                         const SizedBox(height: 8),
                         Text(
-                          'Start a new chat by tapping the edit icon\nabove or adding a friend.',
+                          'Start a new chat by searching for a friend\nor tapping the search icon above.',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             color: Colors.white.withOpacity(0.4),
@@ -557,7 +625,7 @@ class _ChatItem extends StatelessWidget {
         opacity: unreadCount > 0 ? 0.08 : 0.04,
         border: unreadCount > 0 
             ? Border.all(color: AppTheme.secondary.withOpacity(0.4), width: 1.5)
-            : Border.all(color: Colors.white.withOpacity(0.05), width: 0.5),
+            : Border.all(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.07), width: 0.5),
         gradient: unreadCount > 0
             ? LinearGradient(
                 colors: [AppTheme.secondary.withOpacity(0.15), Colors.transparent],
@@ -644,7 +712,7 @@ class _ChatItem extends StatelessWidget {
                         child: Text(
                           name,
                           style: TextStyle(
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.onSurface,
                             fontSize: 17,
                             fontWeight: unreadCount > 0 ? FontWeight.bold : FontWeight.w600,
                             letterSpacing: 0.2,
@@ -656,7 +724,9 @@ class _ChatItem extends StatelessWidget {
                       Text(
                         time,
                         style: TextStyle(
-                          color: unreadCount > 0 ? AppTheme.secondary : Colors.white24,
+                          color: unreadCount > 0
+                              ? AppTheme.secondary
+                              : Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
                           fontSize: 12,
                           fontWeight: unreadCount > 0 ? FontWeight.bold : FontWeight.normal,
                         ),
@@ -670,7 +740,9 @@ class _ChatItem extends StatelessWidget {
                         child: Text(
                           message,
                           style: TextStyle(
-                            color: unreadCount > 0 ? Colors.white.withOpacity(0.9) : Colors.white38,
+                            color: unreadCount > 0
+                                ? Theme.of(context).colorScheme.onSurface.withOpacity(0.85)
+                                : Theme.of(context).colorScheme.onSurface.withOpacity(0.35),
                             fontSize: 14,
                             fontWeight: unreadCount > 0 ? FontWeight.w500 : FontWeight.normal,
                           ),

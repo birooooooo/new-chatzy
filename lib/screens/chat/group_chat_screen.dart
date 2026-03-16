@@ -101,7 +101,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                     Text(
                       '${_members.length} members',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppTheme.textSecondary,
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                       ),
                     ),
                   ],
@@ -203,10 +203,12 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: AppTheme.surface,
+                  color: Theme.of(context).colorScheme.surface,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
+                      color: Theme.of(context).brightness == Brightness.light 
+                        ? Colors.black.withOpacity(0.05) 
+                        : Colors.white.withOpacity(0.02),
                       blurRadius: 10,
                       offset: const Offset(0, -5),
                     ),
@@ -217,7 +219,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                     children: [
                       IconButton(
                         icon: const Icon(Icons.attach_file),
-                        color: AppTheme.textSecondary,
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                         onPressed: () {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(content: Text('Attach file')),
@@ -230,7 +232,9 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                           decoration: InputDecoration(
                             hintText: 'Type a message...',
                             filled: true,
-                            fillColor: AppTheme.background,
+                            fillColor: Theme.of(context).brightness == Brightness.light
+                                ? Colors.black.withOpacity(0.05)
+                                : AppTheme.background,
                             border: OutlineInputBorder(
                               borderRadius: AppTheme.borderRadiusLarge,
                               borderSide: BorderSide.none,
@@ -514,7 +518,7 @@ class _GroupMessageBubble extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
                     gradient: isMe ? AppTheme.primaryGradient : null,
-                    color: isMe ? null : AppTheme.surface,
+                    color: isMe ? null : Theme.of(context).colorScheme.surface,
                     borderRadius: BorderRadius.only(
                       topLeft: const Radius.circular(20),
                       topRight: const Radius.circular(20),
@@ -526,7 +530,7 @@ class _GroupMessageBubble extends StatelessWidget {
                   child: Text(
                     text,
                     style: TextStyle(
-                      color: isMe ? Colors.white : AppTheme.textPrimary,
+                      color: isMe ? Colors.white : Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                 ),
@@ -534,7 +538,7 @@ class _GroupMessageBubble extends StatelessWidget {
                 Text(
                   time,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppTheme.textLight,
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
                     fontSize: 10,
                   ),
                 ),

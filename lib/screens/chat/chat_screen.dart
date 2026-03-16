@@ -172,7 +172,14 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                 children: [
                   const Icon(Icons.auto_awesome_rounded, color: AppTheme.secondary),
                   const SizedBox(width: 12),
-                  Text('Conversation Recap', style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+                  Text(
+                    'Conversation Recap', 
+                    style: GoogleFonts.inter(
+                      fontSize: 20, 
+                      fontWeight: FontWeight.bold, 
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 16),
@@ -187,7 +194,11 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                       controller: scrollController,
                       child: Text(
                         snapshot.data ?? 'Error generating summary',
-                        style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 16, height: 1.6),
+                        style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8), 
+                            fontSize: 16, 
+                            height: 1.6,
+                          ),
                       ),
                     );
                   },
@@ -315,11 +326,17 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.black.withOpacity(0.7),
-                      Colors.transparent,
-                      Colors.black.withOpacity(0.8), // Darker at bottom
-                    ],
+                    colors: themeProvider.isLightTheme
+                        ? [
+                            Colors.white.withOpacity(0.2),
+                            Colors.transparent,
+                            Colors.white.withOpacity(0.4),
+                          ]
+                        : [
+                            Colors.black.withOpacity(0.7),
+                            Colors.transparent,
+                            Colors.black.withOpacity(0.8),
+                          ],
                     stops: const [0.0, 0.5, 0.9],
                   ),
                 ),
@@ -361,6 +378,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   }
 
   PreferredSizeWidget _buildAppBar() {
+    final themeProvider = Provider.of<ThemeProvider>(context);
     return PreferredSize(
       preferredSize: const Size.fromHeight(kToolbarHeight + 20), // Adjust height as needed
       child: GlassContainer(
@@ -372,14 +390,20 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         borderRadius: BorderRadius.circular(24),
         blur: 20,
         gradient: LinearGradient(
-          colors: [Colors.white.withOpacity(0.1), Colors.white.withOpacity(0.05)],
+          colors: themeProvider.isLightTheme
+              ? [Colors.white.withOpacity(0.9), Colors.white.withOpacity(0.7)]
+              : [Colors.white.withOpacity(0.1), Colors.white.withOpacity(0.05)],
         ),
         child: Padding(
           padding: const EdgeInsets.all(8.0),
           child: Row(
             children: [
               IconButton(
-                icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: Colors.white),
+                icon: Icon(
+                  Icons.arrow_back_ios_new_rounded, 
+                  size: 20, 
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
                 onPressed: () => Navigator.pop(context),
               ),
               const SizedBox(width: 8),
@@ -431,7 +455,11 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                       children: [
                         Text(
                           widget.chatName,
-                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16, color: Colors.white),
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600, 
+                            fontSize: 16, 
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
                         ),
                         Consumer<ChatProvider>(
                           builder: (context, provider, _) {
@@ -457,7 +485,11 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
               ),
               const Spacer(),
               IconButton(
-                icon: const Icon(Icons.videocam_rounded, size: 24, color: Colors.white),
+                icon: Icon(
+                  Icons.videocam_rounded, 
+                  size: 24, 
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
+                ),
                 onPressed: () {},
               ),
               IconButton(
@@ -466,7 +498,11 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                 tooltip: 'AI Recap',
               ),
               IconButton(
-                icon: const Icon(Icons.settings, size: 24, color: Colors.white),
+                icon: Icon(
+                  Icons.settings, 
+                  size: 24, 
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
+                ),
                 onPressed: () => _showStyleSettings(context),
               ),
             ],
@@ -601,6 +637,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   // We've shifted all messaging logic to ChatProvider.
 
   Widget _buildInputArea() {
+    final themeProvider = Provider.of<ThemeProvider>(context);
     if (_isRecording) {
       return Padding(
         padding: EdgeInsets.fromLTRB(16, 10, 16, MediaQuery.of(context).padding.bottom + 10),
@@ -632,7 +669,9 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
             borderRadius: BorderRadius.circular(30),
             blur: 20,
             gradient: LinearGradient(
-              colors: [Colors.white.withOpacity(0.12), Colors.white.withOpacity(0.08)],
+              colors: themeProvider.isLightTheme
+                  ? [Colors.black.withOpacity(0.05), Colors.black.withOpacity(0.03)]
+                  : [Colors.white.withOpacity(0.12), Colors.white.withOpacity(0.08)],
             ),
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
             child: Row(
@@ -649,10 +688,10 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                   child: TextField(
                     controller: _messageController,
                     focusNode: _focusNode,
-                    style: const TextStyle(color: Colors.white),
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                     decoration: InputDecoration(
                       hintText: 'iMessage...',
-                      hintStyle: TextStyle(color: Colors.white.withOpacity(0.4)),
+                      hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4)),
                       border: InputBorder.none,
                       contentPadding: const EdgeInsets.symmetric(horizontal: 10),
                       isDense: true,
@@ -662,8 +701,11 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                   ),
                 ),
                 if (!_isTyping) ...[
-                 IconButton(
-                    icon: Icon(Icons.mic_none_rounded, color: Colors.white.withOpacity(0.7)),
+                  IconButton(
+                    icon: Icon(
+                      Icons.mic_none_rounded, 
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                    ),
                     onPressed: () => setState(() => _isRecording = true),
                   ),
                 ] else ...[
@@ -1024,13 +1066,18 @@ class _GlassMessageBubble extends StatelessWidget {
                     gradient: isMe
                         ? AppTheme.primaryGradient
                         : LinearGradient(
-                            colors: [
-                              const Color(0xFF262626).withOpacity(0.9),
-                              const Color(0xFF262626).withOpacity(0.7),
-                            ],
+                            colors: Theme.of(context).brightness == Brightness.light
+                                ? [
+                                    Colors.black.withOpacity(0.1),
+                                    Colors.black.withOpacity(0.05),
+                                  ]
+                                : [
+                                    const Color(0xFF262626).withOpacity(0.9),
+                                    const Color(0xFF262626).withOpacity(0.7),
+                                  ],
                           ),
                     border: Border.all(
-                      color: Colors.white.withOpacity(isMe ? 0.25 : 0.1),
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(isMe ? 0.25 : 0.1),
                       width: 0.8,
                     ),
                     padding: (type == MessageType.image || text.startsWith('POLL:'))
@@ -1040,15 +1087,15 @@ class _GlassMessageBubble extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         if (text.startsWith('POLL:'))
-                          _buildPollContent()
+                          _buildPollContent(context)
                         else if (type == MessageType.image)
                           _buildImageContent(context)
                         else if (type == MessageType.file)
-                          _buildFileContent()
+                          _buildFileContent(context)
                         else if (type == MessageType.audio)
-                          _buildAudioContent()
+                          _buildAudioContent(context)
                         else
-                          _buildTextContent(),
+                          _buildTextContent(context),
                       ],
                     ),
                   ),
@@ -1056,7 +1103,7 @@ class _GlassMessageBubble extends StatelessWidget {
                 
                 // Reactions display
                 if (reactions != null && reactions!.isNotEmpty)
-                  _buildReactionsDisplay(),
+                  _buildReactionsDisplay(context),
               ],
             ),
           ),
@@ -1069,7 +1116,7 @@ class _GlassMessageBubble extends StatelessWidget {
                     children: [
                       Text(
                         time,
-                        style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 11),
+                        style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4), fontSize: 11),
                       ),
                       if (isMe) ...[
                         const SizedBox(width: 4),
@@ -1161,7 +1208,7 @@ class _GlassMessageBubble extends StatelessWidget {
     );
   }
 
-  Widget _buildFileContent() {
+  Widget _buildFileContent(BuildContext context) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -1186,7 +1233,7 @@ class _GlassMessageBubble extends StatelessWidget {
     );
   }
 
-  Widget _buildAudioContent() {
+  Widget _buildAudioContent(BuildContext context) {
     return AudioMessageBubble(
       audioUrl: text,
       isMe: isMe,
@@ -1194,7 +1241,7 @@ class _GlassMessageBubble extends StatelessWidget {
     );
   }
 
-  Widget _buildPollContent() {
+  Widget _buildPollContent(BuildContext context) {
     final parts = text.substring(5).split('|');
     if (parts.length >= 2) {
       return PollWidget(
@@ -1208,18 +1255,20 @@ class _GlassMessageBubble extends StatelessWidget {
     );
   }
 
-  Widget _buildTextContent() {
+  Widget _buildTextContent(BuildContext context) {
     return Text(
       isDeleted ? '🚫 This message was deleted' : text,
       style: TextStyle(
-        color: isDeleted ? Colors.white.withOpacity(0.5) : Colors.white,
+        color: isDeleted 
+            ? Theme.of(context).colorScheme.onSurface.withOpacity(0.5) 
+            : (isMe ? Colors.white : Theme.of(context).colorScheme.onSurface),
         fontSize: 16,
         fontStyle: isDeleted ? FontStyle.italic : FontStyle.normal,
       ),
     );
   }
 
-  Widget _buildReactionsDisplay() {
+  Widget _buildReactionsDisplay(BuildContext context) {
     // Unique reactions count
     final uniqueReactions = reactions!.values.toSet().toList();
     return Padding(
@@ -1233,9 +1282,9 @@ class _GlassMessageBubble extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.1),
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white.withOpacity(0.1)),
+                border: Border.all(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.1)),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -1243,7 +1292,7 @@ class _GlassMessageBubble extends StatelessWidget {
                   Text(emoji, style: const TextStyle(fontSize: 14)),
                   if (count > 1) ...[
                     const SizedBox(width: 4),
-                    Text(count.toString(), style: const TextStyle(color: Colors.white, fontSize: 12)),
+                    Text(count.toString(), style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 12)),
                   ],
                 ],
               ),

@@ -81,22 +81,27 @@ class ChatzyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'CHATZY',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.darkTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.dark,
-      builder: (context, child) {
-        ScreenSize.init(context);
-        return child!;
-      },
-      initialRoute: '/',
-      routes: {
-        '/': (context) => const AuthWrapper(),
-        '/login': (context) => const LoginScreen(),
-        '/register': (context) => const RegisterScreen(),
-        '/home': (context) => const HomeScreen(),
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, _) {
+        final isLight = themeProvider.isLightTheme;
+        return MaterialApp(
+          title: 'CHATZY',
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          themeMode: isLight ? ThemeMode.light : ThemeMode.dark,
+          builder: (context, child) {
+            ScreenSize.init(context);
+            return child!;
+          },
+          initialRoute: '/',
+          routes: {
+            '/': (context) => const AuthWrapper(),
+            '/login': (context) => const LoginScreen(),
+            '/register': (context) => const RegisterScreen(),
+            '/home': (context) => const HomeScreen(),
+          },
+        );
       },
     );
   }
