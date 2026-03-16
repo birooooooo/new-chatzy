@@ -12,6 +12,7 @@ import 'stories_feed_screen.dart';
 import 'settings_screen.dart';
 import 'contacts_screen.dart';
 import 'chats_list_screen.dart';
+import '../../widgets/liquid_glass/liquid_glass_renderer.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -35,13 +36,46 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     
-    return Container(
-      decoration: themeProvider.backgroundDecoration,
+    return LiquidGlassLayer(
+      settings: LiquidGlassSettings(
+        glassColor: themeProvider.isLightTheme 
+            ? Colors.white.withOpacity(0.1) 
+            : Colors.black.withOpacity(0.1),
+        blur: 30,
+        thickness: 20,
+        refractiveIndex: 1.1,
+      ),
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        body: IndexedStack(
-          index: _currentIndex,
-          children: _screens,
+        body: Stack(
+          children: [
+            // Background Liquid Glass Shape
+            Positioned.fill(
+              child: IgnorePointer(
+                child: Center(
+                  child: LiquidGlass.auto(
+                    shape: const LiquidOval(),
+                    child: Container(
+                      width: 300,
+                      height: 300,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            themeProvider.accentColor.withOpacity(0.3),
+                            themeProvider.accentColor.withOpacity(0.1),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            IndexedStack(
+              index: _currentIndex,
+              children: _screens,
+            ),
+          ],
         ),
         bottomNavigationBar: _buildGlassNavBar(),
       ),

@@ -123,250 +123,262 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
       builder: (context, chatProvider, child) {
         return Scaffold(
           backgroundColor: Colors.transparent,
-          body: CustomScrollView(
-            controller: _scrollController,
-            physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
-            slivers: [
-          // Custom App Bar
-          SliverAppBar(
-            floating: true,
-            pinned: true,
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            expandedHeight: _isSearching ? 140 : 80, // Increased to prevent overflow
-            toolbarHeight: 70,
-            flexibleSpace: FlexibleSpaceBar(
-              background: Padding(
-                padding: EdgeInsets.only(
-                  top: MediaQuery.of(context).padding.top + 8,
-                  left: 20,
-                  right: 20,
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'CHATZY',
-                          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 1.0,
-                          ),
-                        ),
-                        // Animated Search Button (Nav-style)
-                        GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _isSearching = !_isSearching;
-                              if (!_isSearching) _searchController.clear();
-                            });
-                          },
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 400),
-                            curve: Curves.easeInOutCubic,
-                            padding: EdgeInsets.symmetric(
-                              horizontal: _isSearching ? 14 : 10,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              color: _isSearching 
-                                ? (Theme.of(context).brightness == Brightness.light 
-                                    ? Colors.black.withOpacity(0.08) 
-                                    : Colors.white.withOpacity(0.12))
-                                : Colors.transparent,
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Icon(
-                              _isSearching ? Icons.close : Icons.search_rounded,
-                              size: 24,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (_isSearching)
-                      Container(
-                        margin: const EdgeInsets.only(top: 15),
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        height: 50,
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.surface.withOpacity(
-                            Theme.of(context).brightness == Brightness.light ? 1.0 : 0.15,
-                          ),
-                          borderRadius: BorderRadius.circular(15),
-                          border: Border.all(
-                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.1),
-                          ),
-                        ),
-                        child: TextField(
-                          controller: _searchController,
-                          autofocus: true,
-                          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
-                          onChanged: (_) => setState(() {}),
-                          decoration: InputDecoration(
-                            hintText: 'Search chats...',
-                            hintStyle: TextStyle(
-                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
-                              fontSize: 15,
-                            ),
-                            border: InputBorder.none,
-                            icon: Icon(
-                              Icons.search, 
-                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
-                              size: 20,
-                            ),
-                          ),
-                        ),
-                      ).animate().fadeIn(duration: 200.ms).slideY(begin: -0.1, end: 0),
-                  ],
-                ),
-              ),
-            ),
-          ),
-
-          // Stories Tray
-          SliverToBoxAdapter(
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 400),
-              curve: Curves.easeInOutCubic,
-              height: _showStories ? 110 : 0,
-              child: ClipRect(
-                child: Opacity(
-                  opacity: _showStories ? 1.0 : 0.0,
-                  child: _buildStoriesTray(),
-                ),
-              ),
-            ),
-          ),
-
-          // Chats List Header
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(24, 8, 24, 12),
-              child: Text(
-                'Recent Messages',
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.5,
-                ),
-              ),
-            ),
-          ),
-
-          // Chats List
-          Builder(
-            builder: (context) {
-              final filteredChats = _getFilteredChats(chatProvider.chats);
-              
-              if (filteredChats.isEmpty) {
-                return SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        GlassContainer(
-                          width: 100,
-                          height: 100,
-                          borderRadius: BorderRadius.circular(30),
-                          blur: 20,
-                          child: Icon(
-                            Icons.chat_bubble_outline_rounded,
-                            size: 48,
-                            color: Colors.white.withOpacity(0.2),
-                          ),
-                        ).animate()
-                          .scale(duration: 600.ms, curve: Curves.easeOutBack)
-                          .fadeIn(),
-                        const SizedBox(height: 24),
-                        Text(
-                          'No conversations yet',
-                          style: GoogleFonts.inter(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ).animate().fadeIn(delay: 200.ms),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Start a new chat by searching for a friend\nor tapping the search icon above.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.4),
-                            fontSize: 14,
-                            height: 1.5,
-                          ),
-                        ).animate().fadeIn(delay: 400.ms),
-                      ],
-                    ),
-                  ),
-                );
+          body: GestureDetector(
+            onTap: () {
+              if (_isSearching) {
+                setState(() {
+                  _isSearching = false;
+                  _searchController.clear();
+                });
+                FocusScope.of(context).unfocus();
               }
-
-              return SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                sliver: SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                      final chat = filteredChats[index];
-                      final lastMsg = chat.lastMessage;
-                      final currentUserId = chatProvider.currentUserId ?? '';
-                      final displayName = chat.getDisplayName(currentUserId);
-                      final displayAvatar = chat.getDisplayAvatar(currentUserId);
-                      
-                      final timeStr = lastMsg != null 
-                        ? (DateTime.now().difference(lastMsg.timestamp).inDays < 1
-                            ? DateFormat.jm().format(lastMsg.timestamp)
-                            : DateFormat.MMMd().format(lastMsg.timestamp))
-                        : '';
-
-                      return _ChatItem(
-                        name: displayName,
-                        message: lastMsg?.content ?? 'No messages yet',
-                        time: timeStr,
-                        unreadCount: chat.unreadCount,
-                        isOnline: chat.participants.any((p) => p.id != currentUserId && p.isOnline),
-                        isGroup: chat.type == ChatType.group,
-                        isPinned: chat.isPinned,
-                        imageUrl: displayAvatar,
-                        onTap: () {
-                          // ... navigation logic remains same ...
-                          if (chat.type == ChatType.group) {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => GroupChatScreen(chatId: chat.id, groupName: displayName),
-                              ),
-                            );
-                          } else {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => ChatScreen(
-                                  chatId: chat.id,
-                                  chatName: displayName,
-                                  isOnline: chat.participants.any((p) => p.id != currentUserId && p.isOnline),
-                                  imageUrl: displayAvatar,
+            },
+            child: CustomScrollView(
+              controller: _scrollController,
+              physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+              slivers: [
+                // Custom App Bar
+                SliverAppBar(
+                  floating: true,
+                  pinned: true,
+                  backgroundColor: Colors.transparent,
+                  elevation: 0,
+                  expandedHeight: _isSearching ? 140 : 80,
+                  toolbarHeight: 70,
+                  flexibleSpace: FlexibleSpaceBar(
+                    background: Padding(
+                      padding: EdgeInsets.only(
+                        top: MediaQuery.of(context).padding.top + 8,
+                        left: 20,
+                        right: 20,
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'CHATZY',
+                                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 1.0,
                                 ),
                               ),
-                            );
-                          }
-                        },
-                        onLongPress: () => _showDeleteConfirmation(context, chatProvider, chat),
-                      ).animate()
-                        .fadeIn(delay: Duration(milliseconds: 100 * index), duration: 400.ms)
-                        .slideY(begin: 0.1, end: 0, curve: Curves.easeOutQuart);
-                    },
-                    childCount: filteredChats.length,
+                              // Animated Search Button (Nav-style)
+                              GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    _isSearching = !_isSearching;
+                                    if (!_isSearching) _searchController.clear();
+                                  });
+                                },
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 400),
+                                  curve: Curves.easeInOutCubic,
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: _isSearching ? 14 : 10,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: _isSearching 
+                                      ? (Theme.of(context).brightness == Brightness.light 
+                                          ? Colors.black.withOpacity(0.08) 
+                                          : Colors.white.withOpacity(0.12))
+                                      : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Icon(
+                                    _isSearching ? Icons.close : Icons.search_rounded,
+                                    size: 24,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (_isSearching)
+                            Container(
+                              margin: const EdgeInsets.only(top: 15),
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              height: 50,
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.surface.withOpacity(
+                                  Theme.of(context).brightness == Brightness.light ? 1.0 : 0.15,
+                                ),
+                                borderRadius: BorderRadius.circular(15),
+                                border: Border.all(
+                                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.1),
+                                ),
+                              ),
+                              child: TextField(
+                                controller: _searchController,
+                                autofocus: true,
+                                style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                                onChanged: (_) => setState(() {}),
+                                decoration: InputDecoration(
+                                  hintText: 'Search chats...',
+                                  hintStyle: TextStyle(
+                                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+                                    fontSize: 15,
+                                  ),
+                                  border: InputBorder.none,
+                                  icon: Icon(
+                                    Icons.search, 
+                                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                                    size: 20,
+                                  ),
+                                ),
+                              ),
+                            ).animate().fadeIn(duration: 200.ms).slideY(begin: -0.1, end: 0),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
-              );
-            },
+
+                // Stories Tray
+                SliverToBoxAdapter(
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 400),
+                    curve: Curves.easeInOutCubic,
+                    height: _showStories ? 110 : 0,
+                    child: ClipRect(
+                      child: Opacity(
+                        opacity: _showStories ? 1.0 : 0.0,
+                        child: _buildStoriesTray(),
+                      ),
+                    ),
+                  ),
+                ),
+
+                // Chats List Header
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 8, 24, 12),
+                    child: Text(
+                      'Recent Messages',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+                ),
+
+                // Chats List
+                Builder(
+                  builder: (context) {
+                    final filteredChats = _getFilteredChats(chatProvider.chats);
+                    
+                    if (filteredChats.isEmpty) {
+                      return SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              GlassContainer(
+                                width: 100,
+                                height: 100,
+                                borderRadius: BorderRadius.circular(30),
+                                blur: 20,
+                                child: Icon(
+                                  Icons.chat_bubble_outline_rounded,
+                                  size: 48,
+                                  color: Colors.white.withOpacity(0.2),
+                                ),
+                              ).animate()
+                                .scale(duration: 600.ms, curve: Curves.easeOutBack)
+                                .fadeIn(),
+                              const SizedBox(height: 24),
+                              Text(
+                                'No conversations yet',
+                                style: GoogleFonts.inter(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ).animate().fadeIn(delay: 200.ms),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Start a new chat by searching for a friend\nor tapping the search icon above.',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: Colors.white.withOpacity(0.4),
+                                  fontSize: 14,
+                                  height: 1.5,
+                                ),
+                              ).animate().fadeIn(delay: 400.ms),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+
+                    return SliverPadding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      sliver: SliverList(
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) {
+                            final chat = filteredChats[index];
+                            final lastMsg = chat.lastMessage;
+                            final currentUserId = chatProvider.currentUserId ?? '';
+                            final displayName = chat.getDisplayName(currentUserId);
+                            final displayAvatar = chat.getDisplayAvatar(currentUserId);
+                            
+                            final timeStr = lastMsg != null 
+                              ? (DateTime.now().difference(lastMsg.timestamp).inDays < 1
+                                  ? DateFormat.jm().format(lastMsg.timestamp)
+                                  : DateFormat.MMMd().format(lastMsg.timestamp))
+                              : '';
+
+                            return _ChatItem(
+                              name: displayName,
+                              message: lastMsg?.content ?? 'No messages yet',
+                              time: timeStr,
+                              unreadCount: chat.unreadCount,
+                              isOnline: chat.participants.any((p) => p.id != currentUserId && p.isOnline),
+                              isGroup: chat.type == ChatType.group,
+                              isPinned: chat.isPinned,
+                              imageUrl: displayAvatar,
+                              onTap: () {
+                                if (chat.type == ChatType.group) {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => GroupChatScreen(chatId: chat.id, groupName: displayName),
+                                    ),
+                                  );
+                                } else {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => ChatScreen(
+                                        chatId: chat.id,
+                                        chatName: displayName,
+                                        isOnline: chat.participants.any((p) => p.id != currentUserId && p.isOnline),
+                                        imageUrl: displayAvatar,
+                                      ),
+                                    ),
+                                  );
+                                }
+                              },
+                              onLongPress: () => _showDeleteConfirmation(context, chatProvider, chat),
+                            ).animate()
+                              .fadeIn(delay: Duration(milliseconds: 100 * index), duration: 400.ms)
+                              .slideY(begin: 0.1, end: 0, curve: Curves.easeOutQuart);
+                          },
+                          childCount: filteredChats.length,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
           ),
 
             ],
@@ -377,37 +389,116 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
   }
 
   void _showDeleteConfirmation(BuildContext context, ChatProvider provider, ChatModel chat) {
-    showDialog(
+    showGeneralDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Delete Chat', style: TextStyle(color: Colors.white)),
-        content: Text(
-          'Are you sure you want to delete your chat with ${chat.name}? This action cannot be undone.',
-          style: TextStyle(color: Colors.white.withOpacity(0.7)),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              provider.deleteChat(chat.id);
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Chat with ${chat.name} deleted')),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.redAccent,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      barrierDismissible: true,
+      barrierLabel: 'Delete Confirmation',
+      barrierColor: Colors.black.withOpacity(0.5),
+      transitionDuration: const Duration(milliseconds: 300),
+      pageBuilder: (context, animation, secondaryAnimation) {
+        final currentUserId = provider.currentUserId ?? '';
+        final displayName = chat.getDisplayName(currentUserId);
+        final displayAvatar = chat.getDisplayAvatar(currentUserId);
+        
+        return Scaffold(
+          backgroundColor: Colors.transparent,
+          body: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 30),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Highlighted Chat Item
+                    _ChatItem(
+                      name: displayName,
+                      message: chat.lastMessage?.content ?? 'No messages yet',
+                      time: '',
+                      unreadCount: 0,
+                      isOnline: false,
+                      isGroup: chat.type == ChatType.group,
+                      isPinned: false,
+                      imageUrl: displayAvatar,
+                      onTap: () {},
+                      onLongPress: () {},
+                    ).animate().scale(begin: const Offset(0.9, 0.9), end: const Offset(1, 1), duration: 400.ms, curve: Curves.easeOutBack).fadeIn(),
+                    
+                    const SizedBox(height: 30),
+                    
+                    // Options
+                    GlassContainer(
+                      padding: const EdgeInsets.all(20),
+                      borderRadius: BorderRadius.circular(24),
+                      blur: 20,
+                      child: Column(
+                        children: [
+                          Text(
+                            'Delete this chat?',
+                            style: GoogleFonts.inter(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Text(
+                            'All messages with $displayName will be permanently removed.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.6),
+                              fontSize: 14,
+                            ),
+                          ),
+                          const SizedBox(height: 25),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextButton(
+                                  onPressed: () => Navigator.pop(context),
+                                  style: TextButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(vertical: 15),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                                  ),
+                                  child: const Text('Cancel', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                                ),
+                              ),
+                              const SizedBox(width: 15),
+                              Expanded(
+                                child: ElevatedButton(
+                                  onPressed: () {
+                                    provider.deleteChat(chat.id);
+                                    Navigator.pop(context);
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('Chat deleted'),
+                                        behavior: SnackBarBehavior.floating,
+                                        backgroundColor: Colors.redAccent.withOpacity(0.8),
+                                      ),
+                                    );
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.redAccent,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(vertical: 15),
+                                    elevation: 0,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                                  ),
+                                  child: const Text('Delete', style: TextStyle(fontWeight: FontWeight.bold)),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ).animate().slideY(begin: 0.2, end: 0, duration: 400.ms, curve: Curves.easeOutQuart).fadeIn(),
+                  ],
+                ),
+              ),
             ),
-            child: const Text('Delete', style: TextStyle(color: Colors.white)),
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
