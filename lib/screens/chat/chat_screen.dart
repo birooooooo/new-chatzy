@@ -23,6 +23,7 @@ import '../../widgets/voice_recorder.dart';
 import '../../widgets/audio_message_bubble.dart';
 import '../../widgets/swipe_to_reply.dart';
 import '../../widgets/poll_widget.dart';
+import '../../widgets/app_widgets.dart';
 
 class ChatScreen extends StatefulWidget {
   final String chatId;
@@ -308,57 +309,54 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     
-    return Container(
-      decoration: themeProvider.backgroundDecoration,
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        extendBodyBehindAppBar: true,
-        appBar: _buildAppBar(),
-        body: Stack(
-          children: [
-            // 3D Background Character
-            _build3DCharacters(),
-            
-            // Gradient Overlay to blend characters into black
-            Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: themeProvider.isLightTheme
-                        ? [
-                            Colors.white.withOpacity(0.2),
-                            Colors.transparent,
-                            Colors.white.withOpacity(0.4),
-                          ]
-                        : [
-                            Colors.black.withOpacity(0.7),
-                            Colors.transparent,
-                            Colors.black.withOpacity(0.8),
-                          ],
-                    stops: const [0.0, 0.5, 0.9],
-                  ),
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      extendBodyBehindAppBar: true,
+      appBar: _buildAppBar(),
+      body: Stack(
+        children: [
+          // 3D Background Character
+          _build3DCharacters(),
+          
+          // Gradient Overlay to blend characters into black
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: themeProvider.isLightTheme
+                      ? [
+                          Colors.white.withOpacity(0.2),
+                          Colors.transparent,
+                          Colors.white.withOpacity(0.4),
+                        ]
+                      : [
+                          Colors.black.withOpacity(0.7),
+                          Colors.transparent,
+                          Colors.black.withOpacity(0.8),
+                        ],
+                  stops: const [0.0, 0.5, 0.9],
                 ),
               ),
             ),
+          ),
 
-            // Main content
-            Column(
-              children: [
-                Expanded(
-                  child: Consumer<ChatProvider>(
-                    builder: (context, chatProvider, child) {
-                      final messages = chatProvider.getMessages(widget.chatId);
-                      return _buildMessagesList(messages);
-                    },
-                  ),
+          // Main content
+          Column(
+            children: [
+              Expanded(
+                child: Consumer<ChatProvider>(
+                  builder: (context, chatProvider, child) {
+                    final messages = chatProvider.getMessages(widget.chatId);
+                    return _buildMessagesList(messages);
+                  },
                 ),
-                _buildInputArea(),
-              ],
-            ),
-          ],
-        ),
+              ),
+              _buildInputArea(),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -423,31 +421,10 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                 },
                 child: Row(
                   children: [
-                    Container(
-                      width: 38,
-                      height: 38,
-                      decoration: BoxDecoration(
-                        gradient: AppTheme.primaryGradient,
-                        borderRadius: BorderRadius.circular(14),
-                        image: widget.imageUrl != null 
-                            ? DecorationImage(
-                                image: NetworkImage(widget.imageUrl!),
-                                fit: BoxFit.cover,
-                              )
-                            : null,
-                      ),
-                      child: widget.imageUrl == null
-                        ? Center(
-                            child: Text(
-                              widget.chatName[0],
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          )
-                        : null,
+                    AppAvatar(
+                      name: widget.chatName,
+                      size: 38,
+                      imageUrl: widget.imageUrl,
                     ),
                     const SizedBox(width: 12),
                     Column(
@@ -1063,19 +1040,19 @@ class _GlassMessageBubble extends StatelessWidget {
                       bottomRight: Radius.circular(isMe ? 4 : 22),
                     ),
                     blur: 15,
-                    gradient: isMe
-                        ? AppTheme.primaryGradient
-                        : LinearGradient(
-                            colors: Theme.of(context).brightness == Brightness.light
-                                ? [
-                                    Colors.black.withOpacity(0.1),
-                                    Colors.black.withOpacity(0.05),
-                                  ]
-                                : [
-                                    const Color(0xFF262626).withOpacity(0.9),
-                                    const Color(0xFF262626).withOpacity(0.7),
-                                  ],
-                          ),
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: isMe
+                        ? [
+                            AppTheme.myMessageBubble.withOpacity(0.95),
+                            AppTheme.myMessageBubble.withOpacity(0.85),
+                          ]
+                        : [
+                            AppTheme.partnerMessageBubble.withOpacity(0.95),
+                            AppTheme.partnerMessageBubble.withOpacity(0.85),
+                          ],
+                    ),
                     border: Border.all(
                       color: Theme.of(context).colorScheme.onSurface.withOpacity(isMe ? 0.25 : 0.1),
                       width: 0.8,

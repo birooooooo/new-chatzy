@@ -13,6 +13,7 @@ import '../profile/profile_screen.dart';
 import 'package:provider/provider.dart';
 import '../../services/auth_service.dart';
 import '../../providers/theme_provider.dart';
+import '../../widgets/app_widgets.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -195,19 +196,10 @@ class _ProfileCard extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Container(
-                  width: 60,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(18),
-                    image: user?.avatar != null 
-                        ? DecorationImage(image: NetworkImage(user!.avatar!), fit: BoxFit.cover) 
-                        : null,
-                  ),
-                  child: user?.avatar == null 
-                      ? const Icon(Icons.person, color: Colors.white, size: 32)
-                      : null,
+                AppAvatar(
+                  name: user?.name ?? 'User',
+                  size: 60,
+                  imageUrl: user?.avatar,
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -267,6 +259,7 @@ class _BackgroundSelector extends StatelessWidget {
             scrollDirection: Axis.horizontal,
             physics: const BouncingScrollPhysics(),
             children: [
+              _buildOption(context, themeProvider, BackgroundStyle.nebula, 'Nebula'),
               _buildOption(context, themeProvider, BackgroundStyle.deepBlack, 'Pure Black'),
               _buildOption(context, themeProvider, BackgroundStyle.midnightGradient, 'Midnight'),
               _buildOption(context, themeProvider, BackgroundStyle.oceanMist, 'Ocean'),
@@ -336,6 +329,13 @@ class _BackgroundSelector extends StatelessWidget {
 
   Decoration _getStaticDecoration(BackgroundStyle style) {
     switch (style) {
+      case BackgroundStyle.nebula:
+        return const BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('assets/images/app_bg.png'),
+            fit: BoxFit.cover,
+          ),
+        );
       case BackgroundStyle.deepBlack:
         return const BoxDecoration(color: Color(0xFF000000));
       case BackgroundStyle.midnightGradient:

@@ -9,13 +9,13 @@ class AppTheme {
   static const Color primaryLight = Color(0xFF1C1C1E);  // Dark Gray for contrast if needed
   
   // Secondary / Accent Colors
-  static const Color secondary = Color(0xFF2997FF);     // Vivid iOS Blue (Electric)
-  static const Color secondaryLight = Color(0xFF64D2FF); // Light Blue
-  static const Color accent = Color(0xFFBF5AF2);        // Vibrant Purple
+  static const Color secondary = Color(0xFF7A8194);     // My Bubbles (Muted Gray-Blue)
+  static const Color secondaryLight = Color(0xFF94A3B8); // Lighter shade
+  static const Color accent = Color(0xFF2997FF);        // Keeping iOS Blue as accent
   static const Color accentAlt = Color(0xFFFF375F);     // Vibrant Red/Pink
   
   // Neutral Colors
-  static const Color background = Color(0xFF000000);    // Pure Black
+  static const Color background = Color(0xFF1B202D);    // New Background (Deep Navy)
   static const Color surface = Colors.transparent;      // Glass usually
   static const Color surfaceGlass = Color(0x1AFFFFFF);  // White with low opacity (10%)
   
@@ -36,8 +36,8 @@ class AppTheme {
   static const Color away = Color(0xFFFF9F0A);
   
   // Chat Bubble Colors
-  static const Color myMessageBubble = Color(0xFF0A84FF);
-  static const Color partnerMessageBubble = Color(0xFF262626); // Dark Gray
+  static const Color myMessageBubble = Color(0xFF7A8194); // My Bubbles (Gray-Blue)
+  static const Color partnerMessageBubble = Color(0xFF292F3F); // Partner Bubbles (Dark Navy-Gray)
 
   // Gradients
   static const LinearGradient primaryGradient = LinearGradient(
@@ -85,13 +85,13 @@ class AppTheme {
       useMaterial3: true,
       brightness: Brightness.dark,
       primaryColor: secondary,
-      scaffoldBackgroundColor: background,
+      scaffoldBackgroundColor: Colors.transparent,
       canvasColor: background,
       
       colorScheme: const ColorScheme.dark(
         primary: secondary,
         secondary: accent,
-        surface: background,
+        surface: Color(0x331B202D), // Translucent Navy (20% opacity)
         onPrimary: Colors.white,
         onSurface: textPrimary,
       ),
@@ -132,13 +132,13 @@ class AppTheme {
       useMaterial3: true,
       brightness: Brightness.light,
       primaryColor: secondary,
-      scaffoldBackgroundColor: const Color(0xFFFFFFFF),
+      scaffoldBackgroundColor: Colors.transparent,
       canvasColor: const Color(0xFFFFFFFF),
 
       colorScheme: const ColorScheme.light(
         primary: secondary,
         secondary: accent,
-        surface: Color(0xFFF2F2F7),
+        surface: Color(0xCCF2F2F7), // Translucent iOS gray (80% opacity) for better readability on light theme
         onPrimary: Colors.white,
         onSurface: lightTextPrimary,
       ),

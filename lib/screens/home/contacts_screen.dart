@@ -11,6 +11,7 @@ import '../../services/auth_service.dart';
 import '../../providers/chat_provider.dart';
 import '../chat/chat_screen.dart';
 import '../../providers/theme_provider.dart';
+import '../../widgets/app_widgets.dart';
 
 class ContactsScreen extends StatefulWidget {
   const ContactsScreen({super.key});
@@ -251,50 +252,11 @@ class _ContactsScreenState extends State<ContactsScreen> {
         ),
         child: Row(
           children: [
-            // Avatar
-            Stack(
-              children: [
-                Container(
-                  width: 50,
-                  height: 50,
-                  decoration: BoxDecoration(
-                    gradient: AppTheme.primaryGradient,
-                    borderRadius: BorderRadius.circular(15),
-                    image: user.avatar != null
-                        ? DecorationImage(
-                            image: NetworkImage(user.avatar!),
-                            fit: BoxFit.cover,
-                          )
-                        : null,
-                  ),
-                  child: user.avatar == null
-                      ? Center(
-                          child: Text(
-                            user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        )
-                      : null,
-                ),
-                if (user.isOnline)
-                  Positioned(
-                    right: 0,
-                    bottom: 0,
-                    child: Container(
-                      width: 14,
-                      height: 14,
-                      decoration: BoxDecoration(
-                        color: AppTheme.online,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: AppTheme.background, width: 2),
-                      ),
-                    ),
-                  ),
-              ],
+            AppAvatar(
+              name: user.name,
+              size: 50,
+              imageUrl: user.avatar,
+              isOnline: user.isOnline,
             ),
             const SizedBox(width: 14),
             // Name and username

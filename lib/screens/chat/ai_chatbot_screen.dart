@@ -198,7 +198,7 @@ class _AiChatbotScreenState extends State<AiChatbotScreen> {
 
   Widget _buildHeader() {
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 60, 20, 10),
+      padding: EdgeInsets.fromLTRB(20, MediaQuery.of(context).padding.top + 10, 20, 5),
       alignment: Alignment.centerLeft,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -216,8 +216,9 @@ class _AiChatbotScreenState extends State<AiChatbotScreen> {
             'powered by Gemini',
             style: TextStyle(
               color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4), 
-              fontSize: 11,
+              fontSize: 10, // Slightly smaller
               fontStyle: FontStyle.italic,
+              height: 1.0, // Tighten line height
             ),
           ),
         ],
@@ -289,54 +290,121 @@ class _AiChatbotScreenState extends State<AiChatbotScreen> {
 
   Widget _buildInput() {
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 0), // ZERO bottom space
-      decoration: const BoxDecoration(
-        color: Colors.transparent, // Transparent for mesh visibility
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              decoration: BoxDecoration(
-                color: Colors.transparent, // Fully transparent inner box
-                borderRadius: BorderRadius.circular(28),
-                border: Border.all(color: Colors.white.withOpacity(0.15)), // Slightly more contrast
+      padding: EdgeInsets.fromLTRB(20, 0, 20, MediaQuery.of(context).padding.bottom + 10),
+      child: GlassContainer(
+        padding: const EdgeInsets.all(12),
+        borderRadius: BorderRadius.circular(32),
+        blur: 25,
+        border: Border.all(color: Colors.white.withOpacity(0.12), width: 1.5),
+        gradient: LinearGradient(
+          colors: [Colors.white.withOpacity(0.08), Colors.white.withOpacity(0.02)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Prompt Input
+            TextField(
+              focusNode: _focusNode,
+              controller: _controller,
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 15),
+              maxLines: null,
+              decoration: InputDecoration(
+                hintText: 'Ask anything...',
+                hintStyle: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
+                  fontSize: 15,
+                ),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               ),
-              child: TextField(
-                focusNode: _focusNode,
-                controller: _controller,
-                style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
-                decoration: InputDecoration(
-                  hintText: 'Ask AI anything...',
-                  hintStyle: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
-                    fontSize: 14,
+              onSubmitted: _sendMessage,
+            ),
+            
+            const SizedBox(height: 12),
+            
+            // Interaction Bar
+            Row(
+              children: [
+                // Tag Friend Button (@)
+                GestureDetector(
+                  onTap: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Tagging feature coming soon!'),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  },
+                  child: GlassContainer(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    borderRadius: BorderRadius.circular(20),
+                    blur: 10,
+                    opacity: 0.1,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '@',
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                 ),
-                onSubmitted: _sendMessage,
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: GestureDetector(
-              onTap: () => _sendMessage(_controller.text),
-              child: Container(
-                width: 52,
-                height: 52,
-                decoration: const BoxDecoration(
-                  gradient: AppTheme.blueGradient,
-                  shape: BoxShape.circle,
+                
+                const Spacer(),
+                
+                // Voice / Soundwave Button (Blue tint)
+                GestureDetector(
+                  onTap: () {},
+                  child: GlassContainer(
+                    width: 42,
+                    height: 42,
+                    borderRadius: BorderRadius.circular(21),
+                    blur: 10,
+                    opacity: 0.15,
+                    color: Colors.blue.withOpacity(0.2),
+                    child: Icon(
+                      Icons.graphic_eq_rounded,
+                      color: Colors.blue.shade300,
+                      size: 20,
+                    ),
+                  ),
                 ),
-                child: const Icon(Icons.send_rounded, color: Colors.white, size: 24),
-              ),
+                
+                const SizedBox(width: 8),
+                
+                // Send Button (Vibrant Green)
+                GestureDetector(
+                  onTap: () => _sendMessage(_controller.text),
+                  child: Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF4ADE80), // Vibrant green
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF4ADE80).withOpacity(0.3),
+                          blurRadius: 10,
+                          offset: const Offset(0, 2),
+                        )
+                      ],
+                    ),
+                    child: const Icon(Icons.arrow_upward_rounded, color: Colors.black, size: 22),
+                  ),
+                ),
+              ],
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

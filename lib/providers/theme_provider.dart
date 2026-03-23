@@ -7,10 +7,11 @@ enum BackgroundStyle {
   cyberPurple,
   glassMesh,
   pureWhite,
+  nebula,
 }
 
 class ThemeProvider extends ChangeNotifier {
-  BackgroundStyle _backgroundStyle = BackgroundStyle.glassMesh;
+  BackgroundStyle _backgroundStyle = BackgroundStyle.nebula;
 
   BackgroundStyle get backgroundStyle => _backgroundStyle;
 
@@ -27,8 +28,15 @@ class ThemeProvider extends ChangeNotifier {
 
   Decoration get backgroundDecoration {
     switch (_backgroundStyle) {
+      case BackgroundStyle.nebula:
+        return const BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('assets/images/app_bg.png'),
+            fit: BoxFit.cover,
+          ),
+        );
       case BackgroundStyle.deepBlack:
-        return const BoxDecoration(color: Color(0xFF000000));
+        return const BoxDecoration(color: Color(0xFF1B202D));
       case BackgroundStyle.midnightGradient:
         return const BoxDecoration(
           gradient: LinearGradient(
@@ -55,15 +63,14 @@ class ThemeProvider extends ChangeNotifier {
         );
       case BackgroundStyle.glassMesh:
         return const BoxDecoration(
-          gradient: RadialGradient(
-            center: Alignment(-0.8, -0.6),
-            radius: 1.5,
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
             colors: [
-              Color(0xFF1E293B),
-              Color(0xFF0F172A),
-              Color(0xFF020617),
+              Color(0xFF002D8B), // Vibrant Royal Blue
+              Color(0xFF00A3FF), // Bright Sky Blue
             ],
-            stops: [0.0, 0.4, 1.0],
+            stops: [0.0, 1.0],
           ),
         );
       case BackgroundStyle.pureWhite:

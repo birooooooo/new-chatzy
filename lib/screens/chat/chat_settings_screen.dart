@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/app_widgets.dart';
 
 class ChatSettingsScreen extends StatefulWidget {
   final String userName;
@@ -48,14 +49,10 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
               ),
               child: Row(
                 children: [
-                  Container(
-                    width: 70,
-                    height: 70,
-                    decoration: BoxDecoration(
-                      gradient: AppTheme.primaryGradient,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.person, color: Colors.white, size: 35),
+                  AppAvatar(
+                    name: widget.userName,
+                    size: 70,
+                    isCircle: true,
                   ),
                   const SizedBox(width: 16),
                   Expanded(

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/app_widgets.dart';
+import '../../widgets/glass_container.dart';
 
 class ChatSearchScreen extends StatefulWidget {
   const ChatSearchScreen({super.key});
@@ -159,14 +161,13 @@ class _MessageSearchResult extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Container(
+            GlassContainer(
               width: 44,
               height: 44,
-              decoration: BoxDecoration(
-                color: AppTheme.info.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(Icons.message, color: AppTheme.info),
+              borderRadius: BorderRadius.circular(12),
+              blur: 10,
+              color: Colors.white.withOpacity(0.1),
+              child: const Icon(Icons.message, color: Colors.white, size: 20),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -227,14 +228,10 @@ class _ChatSearchResult extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                gradient: AppTheme.primaryGradient,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(Icons.group, color: Colors.white),
+            AppAvatar(
+              name: name,
+              size: 44,
+              icon: Icons.group_rounded,
             ),
             const SizedBox(width: 12),
             Expanded(

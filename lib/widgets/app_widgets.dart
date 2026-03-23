@@ -1,47 +1,50 @@
 import 'package:flutter/material.dart';
 import '../core/theme.dart';
+import 'glass_container.dart';
 
 /// Reusable Avatar Widget
 class AppAvatar extends StatelessWidget {
   final String name;
   final double size;
   final bool isOnline;
+  final bool isCircle;
   final String? imageUrl;
+  final IconData? icon;
 
   const AppAvatar({
     super.key,
     required this.name,
     this.size = 48,
     this.isOnline = false,
+    this.isCircle = false,
     this.imageUrl,
+    this.icon,
   });
 
   @override
   Widget build(BuildContext context) {
+    final effectiveRadius = isCircle ? size / 2 : size / 3;
     return Stack(
       children: [
-        Container(
-          width: size,
-          height: size,
-          decoration: BoxDecoration(
-            gradient: AppColors.primaryGradient,
-            borderRadius: BorderRadius.circular(size / 3),
-          ),
-          child: Center(
-            child: Text(
-              name.isNotEmpty ? name[0].toUpperCase() : '?',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: size * 0.4,
-                fontWeight: FontWeight.bold,
-              ),
+        if ((imageUrl != null && imageUrl!.isNotEmpty) || (icon == null))
+          ClipRRect(
+            borderRadius: BorderRadius.circular(effectiveRadius),
+            child: Image.network(
+              (imageUrl != null && imageUrl!.isNotEmpty) 
+                  ? imageUrl! 
+                  : 'https://i.pravatar.cc/${size.toInt()}?u=${name.hashCode}',
+              width: size,
+              height: size,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) => _buildInitials(),
             ),
-          ),
-        ),
+          )
+        else
+          _buildInitials(),
         if (isOnline)
           Positioned(
-            right: 0,
-            bottom: 0,
+            right: isCircle ? 2 : 0,
+            bottom: isCircle ? 2 : 0,
             child: Container(
               width: size * 0.28,
               height: size * 0.28,
@@ -53,6 +56,43 @@ class AppAvatar extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+
+  Widget _buildInitials() {
+    return GlassContainer(
+      width: size,
+      height: size,
+      borderRadius: isCircle ? BorderRadius.circular(size / 2) : BorderRadius.circular(size / 3),
+      blur: 20,
+      gradient: LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          Colors.white.withOpacity(0.2),
+          Colors.white.withOpacity(0.1),
+        ],
+      ),
+      border: Border.all(
+        color: Colors.white.withOpacity(0.2),
+        width: 0.5,
+      ),
+      child: Center(
+        child: icon != null
+            ? Icon(
+                icon,
+                color: Colors.white,
+                size: size * 0.5,
+              )
+            : Text(
+                name.isNotEmpty ? name[0].toUpperCase() : '?',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: size * 0.4,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+      ),
     );
   }
 }

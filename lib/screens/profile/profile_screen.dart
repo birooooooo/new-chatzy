@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/glass_container.dart';
+import '../../widgets/app_widgets.dart';
 import 'dart:ui';
 import 'package:provider/provider.dart';
 import '../../services/auth_service.dart';
@@ -43,27 +44,17 @@ class ProfileScreen extends StatelessWidget {
                   padding: const EdgeInsets.all(24),
                   borderRadius: BorderRadius.circular(32),
                   blur: 20,
-                  gradient: AppTheme.primaryGradient,
+                  color: Colors.white.withOpacity(0.1),
                   border: Border.all(color: Colors.white.withOpacity(0.2), width: 0.5),
                   child: Column(
                     children: [
                       Stack(
                         children: [
-                          Container(
-                            width: 100,
-                            height: 100,
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.1),
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white.withOpacity(0.2), width: 4),
-                              image: user?.avatar != null 
-                                  ? DecorationImage(image: NetworkImage(user!.avatar!), fit: BoxFit.cover) 
-                                  : null,
-                            ),
-                            child: user?.avatar == null 
-                                ? const Icon(Icons.person, size: 50, color: Colors.white)
-                                : null,
-                          ),
+                      AppAvatar(
+                        name: user?.name ?? 'User',
+                        size: 100,
+                        imageUrl: user?.avatar,
+                      ),
                           Positioned(
                             right: 0,
                             bottom: 0,

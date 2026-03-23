@@ -34,82 +34,40 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    
-    return LiquidGlassLayer(
-      settings: LiquidGlassSettings(
-        glassColor: themeProvider.isLightTheme 
-            ? Colors.white.withOpacity(0.1) 
-            : Colors.black.withOpacity(0.1),
-        blur: 30,
-        thickness: 20,
-        refractiveIndex: 1.1,
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: IndexedStack(
+        index: _currentIndex,
+        children: _screens,
       ),
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        body: Stack(
-          children: [
-            // Background Liquid Glass Shape
-            Positioned.fill(
-              child: IgnorePointer(
-                child: Center(
-                  child: LiquidGlass.auto(
-                    shape: const LiquidOval(),
-                    child: Container(
-                      width: 300,
-                      height: 300,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            themeProvider.accentColor.withOpacity(0.3),
-                            themeProvider.accentColor.withOpacity(0.1),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            IndexedStack(
-              index: _currentIndex,
-              children: _screens,
-            ),
-          ],
-        ),
-        bottomNavigationBar: _buildGlassNavBar(),
-      ),
+      bottomNavigationBar: _buildGlassNavBar(),
     );
   }
 
   Widget _buildGlassNavBar() {
-    final themeProvider = Provider.of<ThemeProvider>(context);
     final bottomPadding = MediaQuery.of(context).padding.bottom;
     
-    return GlassContainer(
-      height: 65 + bottomPadding,
-      borderRadius: BorderRadius.zero, // Make it perfectly rectangular to connect directly with edges
-      blur: 20,
-      gradient: LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: themeProvider.isLightTheme 
-          ? [
-              Colors.white.withOpacity(0.95),
-              Colors.white.withOpacity(0.85),
-            ]
-          : [
-              const Color(0xFF1A1A1A).withOpacity(0.95),
-              const Color(0xFF121212).withOpacity(0.85),
-            ],
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 20,
+        right: 20,
+        bottom: bottomPadding + 20,
       ),
-      border: Border.all(color: Colors.transparent, width: 0), // Explicitly remove all borders
-      child: Padding(
-        padding: EdgeInsets.only(
-          left: 10, 
-          right: 10, 
-          top: 10,
-          bottom: bottomPadding > 0 ? bottomPadding : 10, // Adjust for safe area
+      child: GlassContainer(
+        height: 75,
+        borderRadius: BorderRadius.circular(37.5),
+        blur: 50,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            const Color(0xFF001C90).withOpacity(0.4),
+            const Color(0xFF00D2FF).withOpacity(0.3),
+          ],
+        ),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.3),
+          width: 0.8,
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -127,100 +85,51 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildNavItem(int index, IconData icon, String label) {
     final isSelected = _currentIndex == index;
-    final themeProvider = Provider.of<ThemeProvider>(context);
     final isAiItem = index == 2;
     
     return GestureDetector(
       onTap: () => setState(() => _currentIndex = index),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 400),
-        curve: Curves.easeInOutCubic,
-        padding: EdgeInsets.symmetric(
-          horizontal: isSelected ? (isAiItem ? 12 : 16) : 12,
-          vertical: isSelected ? (isAiItem ? 6 : 8) : 10,
-        ),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: isSelected 
-            ? (themeProvider.isLightTheme 
-                ? Colors.black.withOpacity(0.08) 
-                : Colors.white.withOpacity(0.12))
+            ? Colors.white.withOpacity(0.15) 
             : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(25),
         ),
-        child: Row(
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            if (isAiItem && isSelected)
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Text(
-                    "AI",
-                    style: TextStyle(
-                      color: themeProvider.isLightTheme ? Colors.black : Colors.white,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 16,
-                      height: 1.1,
-                      letterSpacing: -0.5,
-                    ),
-                  ),
-                  Text(
-                    "chatzy",
-                    style: TextStyle(
-                      color: themeProvider.isLightTheme 
-                          ? Colors.black.withOpacity(0.6) 
-                          : Colors.white.withOpacity(0.6),
-                      fontWeight: FontWeight.w400,
-                      fontSize: 9,
-                      height: 1.1,
-                    ),
-                  ),
-                ],
-              ).animate().fadeIn(duration: 300.ms).scale(begin: const Offset(0.9, 0.9), end: const Offset(1, 1))
-            else ...[
-              if (isAiItem)
-                Text(
-                  "AI",
-                  style: TextStyle(
-                    color: isSelected 
-                      ? (themeProvider.isLightTheme ? Colors.black : Colors.white)
-                      : (themeProvider.isLightTheme 
-                          ? Colors.black.withOpacity(0.4) 
-                          : Colors.white.withOpacity(0.4)),
-                    fontWeight: FontWeight.w800,
-                    fontSize: 16,
-                    letterSpacing: -0.5,
-                  ),
-                )
-              else
-                Icon(
-                  icon,
-                  color: isSelected 
-                    ? (themeProvider.isLightTheme ? Colors.black : Colors.white)
-                    : (themeProvider.isLightTheme 
-                        ? Colors.black.withOpacity(0.4) 
-                        : Colors.white.withOpacity(0.4)),
-                  size: 24,
+            if (isAiItem)
+              const Text(
+                "AI",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 16,
+                  letterSpacing: -0.5,
+                  height: 1.1,
                 ),
-              if (isSelected && !isAiItem) ...[
-                const SizedBox(width: 8),
-                Text(
-                  label,
-                  style: TextStyle(
-                    color: themeProvider.isLightTheme ? Colors.black : Colors.white,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
-                  ),
-                ).animate().fadeIn(duration: 300.ms).slideX(begin: -0.2, end: 0),
-              ],
-            ],
+              )
+            else
+              Icon(
+                icon,
+                color: Colors.white,
+                size: 24,
+              ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w400,
+                fontSize: 10,
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 }
-
-

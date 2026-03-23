@@ -31,25 +31,16 @@ void main() async {
   }
   
   bool firebaseInitialized = false;
-  // Firebase Desktop (Windows) support requires a registered Windows app in Firebase Console.
-  // On Windows and Web, we use MockAuthService for local development/testing.
-  final isDesktopOrWeb = kIsWeb || defaultTargetPlatform == TargetPlatform.windows ||
-      defaultTargetPlatform == TargetPlatform.linux ||
-      defaultTargetPlatform == TargetPlatform.macOS;
-
-  if (!isDesktopOrWeb) {
-    try {
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
-      );
-      firebaseInitialized = true;
-      debugPrint("Firebase initialized successfully");
-    } catch (e) {
-      debugPrint("Firebase initialization failed: $e");
-      debugPrint("Falling back to MockAuthService for development.");
-    }
-  } else {
-    debugPrint("Desktop/Web platform detected — using MockAuthService.");
+  // Enable Firebase on all platforms that have options (Web, Android, iOS, Windows)
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    firebaseInitialized = true;
+    debugPrint("Firebase initialized successfully");
+  } catch (e) {
+    debugPrint("Firebase initialization failed or skipped for this platform: $e");
+    debugPrint("Falling back to MockAuthService if needed.");
   }
 
   MediaKit.ensureInitialized();
@@ -92,7 +83,14 @@ class ChatzyApp extends StatelessWidget {
           themeMode: isLight ? ThemeMode.light : ThemeMode.dark,
           builder: (context, child) {
             ScreenSize.init(context);
-            return child!;
+            return Container(
+              decoration: themeProvider.backgroundDecoration,
+              child: Stack(
+                children: [
+                  if (child != null) child,
+                ],
+              ),
+            );
           },
           initialRoute: '/',
           routes: {

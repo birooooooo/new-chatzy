@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/app_widgets.dart';
 import '../../widgets/animated_human_character.dart';
 import 'package:provider/provider.dart';
 import '../../providers/chat_provider.dart';
@@ -80,14 +81,11 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
           onTap: () => _showGroupInfo(),
           child: Row(
             children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: const BoxDecoration(
-                  gradient: AppTheme.primaryGradient,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.group, color: Colors.white, size: 22),
+              AppAvatar(
+                name: widget.groupName,
+                size: 40,
+                icon: Icons.group_rounded,
+                isCircle: true,
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -234,7 +232,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                             filled: true,
                             fillColor: Theme.of(context).brightness == Brightness.light
                                 ? Colors.black.withOpacity(0.05)
-                                : AppTheme.background,
+                                : Colors.white.withOpacity(0.06),
                             border: OutlineInputBorder(
                               borderRadius: AppTheme.borderRadiusLarge,
                               borderSide: BorderSide.none,
@@ -329,14 +327,11 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
               ),
               const SizedBox(height: 20),
               Center(
-                child: Container(
-                  width: 100,
-                  height: 100,
-                  decoration: const BoxDecoration(
-                    gradient: AppTheme.primaryGradient,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.group, color: Colors.white, size: 50),
+                child: AppAvatar(
+                  name: widget.groupName,
+                  size: 100,
+                  icon: Icons.group_rounded,
+                  isCircle: true,
                 ),
               ),
               const SizedBox(height: 16),
@@ -384,17 +379,10 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
               ),
               const SizedBox(height: 12),
               ..._members.map((member) => ListTile(
-                leading: Container(
-                  width: 45,
-                  height: 45,
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryLight.withOpacity(0.2),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.person,
-                    color: AppTheme.primary,
-                  ),
+                leading: AppAvatar(
+                  name: member,
+                  size: 45,
+                  isCircle: true,
                 ),
                 title: Text(member),
                 subtitle: Text(member == 'You' ? 'You' : 'Member'),
@@ -476,26 +464,13 @@ class _GroupMessageBubble extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           if (!isMe) ...[
-            if (showSender)
-              Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: _senderColor.withOpacity(0.2),
-                  shape: BoxShape.circle,
-                ),
-                child: Center(
-                  child: Text(
-                    sender[0],
-                    style: TextStyle(
-                      color: _senderColor,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              )
-            else
-              const SizedBox(width: 32),
+            showSender
+                ? AppAvatar(
+                    name: sender,
+                    size: 32,
+                    isCircle: true,
+                  )
+                : const SizedBox(width: 32),
             const SizedBox(width: 8),
           ],
           Flexible(

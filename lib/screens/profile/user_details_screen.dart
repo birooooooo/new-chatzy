@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/app_widgets.dart';
 
 class UserDetailsScreen extends StatelessWidget {
   final String userName;
@@ -55,49 +56,19 @@ class UserDetailsScreen extends StatelessWidget {
             ],
             flexibleSpace: FlexibleSpaceBar(
               background: Container(
-                decoration: const BoxDecoration(
-                  gradient: AppTheme.primaryGradient,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.1),
                 ),
                 child: Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       const SizedBox(height: 40),
-                      Stack(
-                        children: [
-                          Container(
-                            width: 120,
-                            height: 120,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white, width: 4),
-                              image: imageUrl != null 
-                                  ? DecorationImage(
-                                      image: NetworkImage(imageUrl!),
-                                      fit: BoxFit.cover,
-                                    )
-                                  : null,
-                            ),
-                            child: imageUrl == null 
-                                ? const Icon(Icons.person, size: 60, color: AppTheme.primary)
-                                : null,
-                          ),
-                          if (isOnline)
-                            Positioned(
-                              right: 8,
-                              bottom: 8,
-                              child: Container(
-                                width: 24,
-                                height: 24,
-                                decoration: BoxDecoration(
-                                  color: AppTheme.online,
-                                  shape: BoxShape.circle,
-                                  border: Border.all(color: Colors.white, width: 3),
-                                ),
-                              ),
-                            ),
-                        ],
+                      AppAvatar(
+                        name: userName,
+                        size: 120,
+                        imageUrl: imageUrl,
+                        isOnline: isOnline,
                       ),
                       const SizedBox(height: 16),
                       Text(

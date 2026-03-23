@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/glass_container.dart';
+import '../../widgets/app_widgets.dart';
 import '../../services/story_service.dart';
 import '../../services/auth_service.dart';
 import '../../providers/story_provider.dart';
@@ -230,7 +231,13 @@ class _StoriesFeedScreenState extends State<StoriesFeedScreen> {
         width: 44,
         height: 44,
         borderRadius: BorderRadius.circular(14),
-        gradient: AppTheme.primaryGradient,
+        gradient: LinearGradient(
+          colors: [
+            Colors.white.withOpacity(0.2),
+            Colors.white.withOpacity(0.1),
+          ],
+        ),
+        blur: 10,
         child: _isUploading 
             ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
             : const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 22),
@@ -253,16 +260,11 @@ class _StoriesFeedScreenState extends State<StoriesFeedScreen> {
           children: [
             Stack(
               children: [
-                Container(
-                  width: 54,
-                  height: 54,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: user?.avatar != null 
-                      ? ClipOval(child: Image.network(user!.avatar!, fit: BoxFit.cover))
-                      : const Icon(Icons.person, size: 28, color: Colors.white),
+                AppAvatar(
+                  name: user?.name ?? 'User',
+                  size: 54,
+                  imageUrl: user?.avatar,
+                  isCircle: true,
                 ),
                 Positioned(
                   right: 0,
@@ -387,35 +389,11 @@ class _StoryCard extends StatelessWidget {
             Positioned(
               top: 12,
               left: 12,
-              child: Container(
-                padding: const EdgeInsets.all(2),
-                decoration: const BoxDecoration(
-                  gradient: AppTheme.primaryGradient,
-                  shape: BoxShape.circle,
-                ),
-                child: Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.1),
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 1.5),
-                  ),
-                  child: ClipOval(
-                    child: story.userAvatar != null
-                        ? Image.network(story.userAvatar!, fit: BoxFit.cover)
-                        : Center(
-                            child: Text(
-                              story.userName[0],
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
-                  ),
-                ),
+              child: AppAvatar(
+                name: story.userName,
+                size: 34,
+                imageUrl: story.userAvatar,
+                isCircle: true,
               ),
             ),
             // Name and time

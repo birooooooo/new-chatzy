@@ -2,7 +2,8 @@ class UserModel {
   final String id;
   final String name;
   final String email;
-  final String? avatar;
+  final String? _avatar;
+  String? get avatar => _avatar ?? 'https://i.pravatar.cc/150?u=$id';
   final String? bio;
   final String? phone;
   final bool isOnline;
@@ -17,7 +18,7 @@ class UserModel {
     required this.id,
     required this.name,
     required this.email,
-    this.avatar,
+    String? avatar,
     this.bio,
     this.phone,
     this.isOnline = false,
@@ -27,7 +28,7 @@ class UserModel {
     this.isMuted = false,
     this.username,
     this.searchKeywords = const [],
-  });
+  }) : _avatar = avatar;
 
   String get displayName => customNickname ?? name;
 
@@ -50,7 +51,7 @@ class UserModel {
       id: id ?? this.id,
       name: name ?? this.name,
       email: email ?? this.email,
-      avatar: avatar ?? this.avatar,
+      avatar: avatar ?? this._avatar,
       bio: bio ?? this.bio,
       phone: phone ?? this.phone,
       isOnline: isOnline ?? this.isOnline,
@@ -68,7 +69,7 @@ class UserModel {
       'id': id,
       'name': name,
       'email': email,
-      'avatar': avatar,
+      'avatar': _avatar,
       'bio': bio,
       'phone': phone,
       'isOnline': isOnline ? 1 : 0,

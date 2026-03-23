@@ -42,7 +42,7 @@ class GlassContainer extends StatelessWidget {
       padding: padding,
       // margin: margin, // Removed to contain blur inside border
       decoration: BoxDecoration(
-        color: color ?? AppTheme.background.withOpacity(0.01), // Very transparent base
+        color: color ?? Colors.black.withOpacity(0.01), // Very transparent base
         borderRadius: effectiveBorderRadius,
         border: border ?? Border.all(
           color: Colors.white.withOpacity(0.1),
