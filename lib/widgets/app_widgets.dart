@@ -204,10 +204,10 @@ class AppInput extends StatelessWidget {
       obscureText: isPassword,
       keyboardType: keyboardType,
       onChanged: onChanged,
-      style: const TextStyle(color: AppColors.textPrimary),
+      style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: const TextStyle(color: AppColors.textLight),
+        hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4)),
         prefixIcon: prefixIcon != null 
             ? Icon(prefixIcon, color: AppColors.textLight, size: 20) 
             : null,
@@ -253,11 +253,15 @@ class ChatTile extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        name,
-                        style: TextStyle(
-                          fontWeight: unreadCount > 0 ? FontWeight.bold : FontWeight.w500,
-                          fontSize: 16,
+                      Flexible(
+                        child: Text(
+                          name,
+                          style: TextStyle(
+                            fontWeight: unreadCount > 0 ? FontWeight.bold : FontWeight.w500,
+                            fontSize: 16,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       Text(

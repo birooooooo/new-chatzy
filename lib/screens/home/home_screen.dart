@@ -1,18 +1,16 @@
-import 'package:flutter/material.dart';
 import 'dart:ui';
+import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/glass_container.dart';
 import '../../widgets/glass_text_field.dart';
-import '../chat/chat_screen.dart';
 import '../chat/ai_chatbot_screen.dart';
 import 'stories_feed_screen.dart';
 import 'settings_screen.dart';
 import 'contacts_screen.dart';
 import 'chats_list_screen.dart';
-import '../../widgets/liquid_glass/liquid_glass_renderer.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -23,13 +21,21 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
-  
+
   final List<Widget> _screens = [
     const ChatsListScreen(),
     const ContactsScreen(),
     const AiChatbotScreen(),
     const StoriesFeedScreen(),
     const SettingsScreen(),
+  ];
+
+  static const _navItems = [
+    (Icons.home_outlined, 'Home'),
+    (Icons.contact_page_outlined, 'Contacts'),
+    (Icons.psychology_outlined, 'AI'),
+    (Icons.auto_stories_outlined, 'Stories'),
+    (Icons.person_outline, 'Profile'),
   ];
 
   @override
@@ -40,91 +46,161 @@ class _HomeScreenState extends State<HomeScreen> {
         index: _currentIndex,
         children: _screens,
       ),
-      bottomNavigationBar: _buildGlassNavBar(),
+      bottomNavigationBar: _buildNavBar(),
     );
   }
 
-  Widget _buildGlassNavBar() {
+  Widget _buildNavBar() {
     final bottomPadding = MediaQuery.of(context).padding.bottom;
-    
+
     return Padding(
       padding: EdgeInsets.only(
         left: 20,
         right: 20,
-        bottom: bottomPadding + 20,
+        bottom: bottomPadding + 16,
       ),
-      child: GlassContainer(
-        height: 75,
-        borderRadius: BorderRadius.circular(37.5),
-        blur: 50,
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            const Color(0xFF001C90).withOpacity(0.4),
-            const Color(0xFF00D2FF).withOpacity(0.3),
-          ],
-        ),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.3),
-          width: 0.8,
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            _buildNavItem(0, Icons.home_outlined, 'Home'),
-            _buildNavItem(1, Icons.contact_page_outlined, 'Contacts'),
-            _buildNavItem(2, Icons.psychology_outlined, 'AI Chat'),
-            _buildNavItem(3, Icons.auto_stories_outlined, 'Stories'),
-            _buildNavItem(4, Icons.person_outline, 'Profile'),
-          ],
-        ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final totalWidth = constraints.maxWidth;
+          final itemWidth = totalWidth / _navItems.length;
+          final pillLeft = _currentIndex * itemWidth + itemWidth * 0.06;
+          final pillWidth = itemWidth * 0.88;
+
+          // Outer pill — same GlassContainer style as chat items
+          return GlassContainer(
+            height: 72,
+            borderRadius: BorderRadius.circular(36),
+            blur: 20,
+            opacity: 0.06,
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Colors.white.withOpacity(0.10),
+                Colors.white.withOpacity(0.04),
+              ],
+            ),
+            child: Stack(
+              children: [
+                // ── Animated selected pill ────────────────────────────
+                AnimatedPositioned(
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeInOut,
+                  left: pillLeft,
+                  top: 8,
+                  width: pillWidth,
+                  height: 56,
+                  child: _GlassPill(),
+                ),
+
+                // ── Nav icons + labels ────────────────────────────────
+                Positioned.fill(
+                  child: Row(
+                    children: [
+                      for (int i = 0; i < _navItems.length; i++)
+                        Expanded(child: _buildNavItem(i)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
 
-  Widget _buildNavItem(int index, IconData icon, String label) {
+  Widget _buildNavItem(int index) {
     final isSelected = _currentIndex == index;
-    final isAiItem = index == 2;
-    
+    final (icon, label) = _navItems[index];
+
     return GestureDetector(
       onTap: () => setState(() => _currentIndex = index),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected 
-            ? Colors.white.withOpacity(0.15) 
-            : Colors.transparent,
-          borderRadius: BorderRadius.circular(25),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
+      behavior: HitTestBehavior.opaque,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          AnimatedScale(
+            scale: isSelected ? 1.12 : 1.0,
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOut,
+            child: Icon(
+              icon,
+              color: isSelected
+                  ? Colors.white
+                  : Colors.white.withOpacity(0.32),
+              size: 22,
+            ),
+          ),
+          const SizedBox(height: 3),
+          AnimatedDefaultTextStyle(
+            duration: const Duration(milliseconds: 220),
+            style: TextStyle(
+              color: isSelected
+                  ? Colors.white
+                  : Colors.white.withOpacity(0.32),
+              fontSize: 10,
+              fontWeight:
+                  isSelected ? FontWeight.w500 : FontWeight.w400,
+            ),
+            child: Text(label),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Selected-tab glass pill — matches the GlassContainer style used in
+/// chat list items, with an extra bright lens glow at the top.
+class _GlassPill extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(26),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: Stack(
           children: [
-            if (isAiItem)
-              const Text(
-                "AI",
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 16,
-                  letterSpacing: -0.5,
-                  height: 1.1,
+            // Base glass layer — same opacity/gradient as chat items
+            Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(26),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Colors.white.withOpacity(0.13),
+                    Colors.white.withOpacity(0.05),
+                  ],
                 ),
-              )
-            else
-              Icon(
-                icon,
-                color: Colors.white,
-                size: 24,
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.18),
+                  width: 0.8,
+                ),
               ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w400,
-                fontSize: 10,
+            ),
+
+            // Bright top lens glow (the key visual from the reference image)
+            Positioned(
+              top: -6,
+              left: 14,
+              right: 14,
+              height: 28,
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  gradient: RadialGradient(
+                    center: Alignment.topCenter,
+                    radius: 0.85,
+                    colors: [
+                      Colors.white.withOpacity(0.60),
+                      Colors.white.withOpacity(0.18),
+                      Colors.transparent,
+                    ],
+                    stops: const [0.0, 0.45, 1.0],
+                  ),
+                ),
               ),
             ),
           ],

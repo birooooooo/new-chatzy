@@ -42,17 +42,17 @@ class GlassContainer extends StatelessWidget {
       padding: padding,
       // margin: margin, // Removed to contain blur inside border
       decoration: BoxDecoration(
-        color: color ?? Colors.black.withOpacity(0.01), // Very transparent base
+        color: color ?? Colors.black.withOpacity(0.15),
         borderRadius: effectiveBorderRadius,
         border: border ?? Border.all(
-          color: Colors.white.withOpacity(0.1),
-          width: 0.5,
+          color: Colors.white.withOpacity(0.18),
+          width: 0.8,
         ),
         gradient: gradient ?? LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            Colors.white.withOpacity(opacity + 0.05),
+            Colors.white.withOpacity(opacity + 0.08),
             Colors.white.withOpacity(opacity),
           ],
         ),

@@ -44,15 +44,15 @@ class SettingsScreen extends StatelessWidget {
                 // Profile Card
                 _ProfileCard()
                     .animate()
-                    .fadeIn(duration: 400.ms)
+                    .fadeIn(duration: 250.ms)
                     .slideY(begin: 0.1, end: 0),
 
                 const SizedBox(height: 28),
-                
+
                 // Background Selector
                 const _BackgroundSelector()
                     .animate()
-                    .fadeIn(delay: 200.ms, duration: 400.ms)
+                    .fadeIn(delay: 60.ms, duration: 250.ms)
                     .slideY(begin: 0.1, end: 0),
 
                 const SizedBox(height: 28),
@@ -74,7 +74,7 @@ class SettingsScreen extends StatelessWidget {
                     ),
                   ],
                 ).animate()
-                    .fadeIn(delay: 100.ms, duration: 400.ms)
+                    .fadeIn(delay: 120.ms, duration: 250.ms)
                     .slideY(begin: 0.1, end: 0),
 
                 const SizedBox(height: 20),
@@ -118,7 +118,7 @@ class SettingsScreen extends StatelessWidget {
                     ),
                   ],
                 ).animate()
-                    .fadeIn(delay: 200.ms, duration: 400.ms)
+                    .fadeIn(delay: 180.ms, duration: 250.ms)
                     .slideY(begin: 0.1, end: 0),
 
                 const SizedBox(height: 20),
@@ -140,7 +140,7 @@ class SettingsScreen extends StatelessWidget {
                     ),
                   ],
                 ).animate()
-                    .fadeIn(delay: 400.ms, duration: 400.ms)
+                    .fadeIn(delay: 240.ms, duration: 250.ms)
                     .slideY(begin: 0.1, end: 0),
 
                 const SizedBox(height: 32),
@@ -148,7 +148,7 @@ class SettingsScreen extends StatelessWidget {
                 // Logout Button
                 _LogoutButton()
                     .animate()
-                    .fadeIn(delay: 500.ms, duration: 400.ms),
+                    .fadeIn(delay: 280.ms, duration: 250.ms),
 
                 const SizedBox(height: 24),
 

@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(flutter clean:*)",
+      "Bash(taskkill /F /IM \"dart.exe\" /T)",
+      "Bash(taskkill /F /IM \"flutter.bat\" /T)",
+      "Bash(taskkill /F /IM \"chrome.exe\" /T)",
+      "Bash(cmd /c \"taskkill /F /IM dart.exe /T 2>nul & taskkill /F /IM java.exe /T 2>nul & echo done\")",
+      "Bash(cmd /c \"rmdir /s /q \"\"C:\\\\Users\\\\berha\\\\OneDrive\\\\Desktop\\\\v0\\\\build\"\" 2>nul & echo cleaned\")"
+    ]
+  }
+}

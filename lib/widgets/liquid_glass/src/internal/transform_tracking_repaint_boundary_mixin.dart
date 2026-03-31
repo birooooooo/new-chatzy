@@ -1,5 +1,6 @@
 import 'dart:ui' as ui;
 import 'package:flutter/rendering.dart';
+import 'package:meta/meta.dart' show mustCallSuper;
 
 mixin TransformTrackingRepaintBoundaryMixin on RenderProxyBox {
   @override

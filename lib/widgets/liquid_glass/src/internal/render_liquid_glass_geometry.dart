@@ -1,8 +1,9 @@
 import 'dart:ui';
 import 'package:equatable/equatable.dart';
 import 'package:flutter/rendering.dart';
+import 'package:meta/meta.dart' show protected;
 import 'package:flutter_shaders/flutter_shaders.dart';
-import '../liquid_glass_renderer.dart';
+import '../../liquid_glass_renderer.dart';
 import 'snap_rect_to_pixels.dart';
 import '../liquid_glass.dart';
 import '../liquid_glass_blend_group.dart';

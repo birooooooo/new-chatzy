@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:logging/logging.dart';
 
 export 'package:logging/logging.dart' show Level, Logger;

@@ -3,12 +3,13 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_shaders/flutter_shaders.dart';
-import '../liquid_glass_renderer.dart';
+import '../../liquid_glass_renderer.dart';
 import '../internal/render_liquid_glass_geometry.dart';
 import '../internal/transform_tracking_repaint_boundary_mixin.dart';
 import '../liquid_glass_render_scope.dart';
 import '../logging.dart';
 import '../shaders.dart';
+import 'liquid_glass_render_object.dart';
 
 class LiquidGlassLayer extends StatefulWidget {
   const LiquidGlassLayer({

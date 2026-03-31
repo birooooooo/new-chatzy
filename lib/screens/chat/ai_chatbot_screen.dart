@@ -7,6 +7,7 @@ import '../../theme/app_theme.dart';
 import '../../providers/chat_provider.dart';
 import '../../services/ai_service.dart';
 import '../../models/message_model.dart';
+import '../../widgets/glass_container.dart';
 
 class AiChatbotScreen extends StatefulWidget {
   const AiChatbotScreen({super.key});
@@ -154,7 +155,7 @@ class _AiChatbotScreenState extends State<AiChatbotScreen> {
                 ),
               ),
               if (_isTyping) _buildTypingIndicator(),
-              const SizedBox(height: 100), // Height of docked input
+              const SizedBox(height: 110), // Height of docked input + safe area
             ],
           ),
           Positioned(
@@ -232,7 +233,7 @@ class _AiChatbotScreenState extends State<AiChatbotScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 20),
       itemCount: messages.length,
       itemBuilder: (context, index) {
-        final msg = messages[messages.length - 1 - index];
+        final msg = messages[index];
         final isMe = msg.senderId == 'me';
         
         return Align(
@@ -272,13 +273,13 @@ class _AiChatbotScreenState extends State<AiChatbotScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.05),
+              color: Colors.white.withOpacity(0.15),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
-              'AI is thinking...', 
+              'AI is thinking...',
               style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.85),
                 fontSize: 13,
               ),
             ),

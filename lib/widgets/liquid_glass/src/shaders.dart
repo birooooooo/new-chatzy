@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:meta/meta.dart' show visibleForTesting;
 
 @visibleForTesting
 bool isLocalTest = false;
