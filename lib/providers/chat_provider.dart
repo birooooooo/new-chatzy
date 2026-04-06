@@ -21,6 +21,8 @@ class ChatProvider extends ChangeNotifier {
   
   StreamSubscription? _chatsSubscription;
   final Map<String, StreamSubscription> _messageSubscriptions = {};
+  final Map<String, StreamSubscription> _presenceSubscriptions = {};
+  final Map<String, UserModel> _liveUsers = {}; // userId → live presence
   
   bool _isInitialized = false;
   String? _currentUserId;
@@ -30,6 +32,11 @@ class ChatProvider extends ChangeNotifier {
   UserModel? get currentUserProfile => _currentUserProfile;
 
   List<ChatModel> get chats => List.unmodifiable(_chats);
+
+  /// Get live presence for a user (falls back to stale participant data)
+  UserModel? getLiveUser(String userId) => _liveUsers[userId];
+
+  FirebaseStorageService get storageService => _storageService;
   
 
   ChatProvider() {
@@ -59,21 +66,35 @@ class ChatProvider extends ChangeNotifier {
       (firestoreChats) {
         debugPrint('ChatProvider: Received ${firestoreChats.length} chats from Firestore');
         _chats.clear();
-        if (firestoreChats.isNotEmpty) {
-          _chats.addAll(firestoreChats);
-          
-          // Sort locally by updatedAt descending (backup: createdAt)
-          _chats.sort((a, b) {
-            final timeA = a.updatedAt ?? a.createdAt ?? DateTime(2000);
-            final timeB = b.updatedAt ?? b.createdAt ?? DateTime(2000);
-            return timeB.compareTo(timeA);
-          });
-          
-          // Save to local database for offline access
-          for (var chat in firestoreChats) {
-            DatabaseService.saveChat(chat);
+        _chats.addAll(firestoreChats);
+
+        // Sort locally by updatedAt descending
+        _chats.sort((a, b) {
+          final timeA = a.updatedAt ?? a.createdAt ?? DateTime(2000);
+          final timeB = b.updatedAt ?? b.createdAt ?? DateTime(2000);
+          return timeB.compareTo(timeA);
+        });
+
+        // Save to local database for offline access
+        for (var chat in firestoreChats) {
+          DatabaseService.saveChat(chat);
+        }
+
+        // Subscribe to live presence for all participants we haven't tracked yet
+        for (final chat in firestoreChats) {
+          for (final participant in chat.participants) {
+            if (participant.id == userId) continue;
+            if (_presenceSubscriptions.containsKey(participant.id)) continue;
+            _presenceSubscriptions[participant.id] = _userService
+                .watchUser(participant.id)
+                .listen((liveUser) {
+              if (liveUser == null) return;
+              _liveUsers[liveUser.id] = liveUser;
+              notifyListeners();
+            });
           }
         }
+
         notifyListeners();
       },
       onError: (error) {
@@ -84,7 +105,7 @@ class ChatProvider extends ChangeNotifier {
   }
 
   /// Subscribe to messages for a specific chat
-  void subscribeToMessages(String chatId) {
+  void subscribeToMessages(String chatId, {bool autoMarkAsRead = false}) {
     if (_messageSubscriptions.containsKey(chatId)) return;
     
     debugPrint('ChatProvider: Subscribing to messages for chat: $chatId');
@@ -92,17 +113,20 @@ class ChatProvider extends ChangeNotifier {
     _messageSubscriptions[chatId] = _firestoreService
         .getChatMessages(chatId)
         .listen((firestoreMessages) {
-      if (firestoreMessages.isNotEmpty) {
-        debugPrint('ChatProvider: Loaded ${firestoreMessages.length} messages for chat $chatId');
-        _messages[chatId] = firestoreMessages;
-        
-        // Save to local DB
-        for (var msg in firestoreMessages) {
-          DatabaseService.saveMessage(msg);
-        }
-        
-        notifyListeners();
+      debugPrint('ChatProvider: Loaded ${firestoreMessages.length} messages for chat $chatId');
+      _messages[chatId] = firestoreMessages;
+
+      // Save to local DB
+      for (var msg in firestoreMessages) {
+        DatabaseService.saveMessage(msg);
       }
+
+      // Auto-Mark as read if specified (when chat is open)
+      if (autoMarkAsRead && firestoreMessages.isNotEmpty) {
+        markMessagesAsRead(chatId);
+      }
+
+      notifyListeners();
     }, onError: (error) {
       debugPrint('ChatProvider: Error loading messages: $error');
     });
@@ -235,7 +259,7 @@ class ChatProvider extends ChangeNotifier {
             debugPrint('ChatProvider: Upload success: $downloadUrl');
             // Update message with URL
             message = message.copyWith(content: downloadUrl);
-            
+
             // Update local state with URL
             final msgIndex = _messages[chatId]!.indexWhere((m) => m.id == messageId);
             if (msgIndex != -1) {
@@ -243,7 +267,11 @@ class ChatProvider extends ChangeNotifier {
             }
           } else {
             debugPrint('ChatProvider: File upload failed');
-            message.status = MessageStatus.failed;
+            message = message.copyWith(status: MessageStatus.failed);
+            final msgIndex = _messages[chatId]!.indexWhere((m) => m.id == messageId);
+            if (msgIndex != -1) {
+              _messages[chatId]![msgIndex] = message;
+            }
             notifyListeners();
             return; // Stop processing
           }
@@ -258,29 +286,33 @@ class ChatProvider extends ChangeNotifier {
     if (_isInitialized) {
       try {
         // Update status to sent before sending
-        message.status = MessageStatus.sent;
-        
+        message = message.copyWith(status: MessageStatus.sent);
+
         // Update local state status
-        final msgIndex = _messages[chatId]!.indexWhere((m) => m.id == messageId);
-        if (msgIndex != -1) {
-          _messages[chatId]![msgIndex] = message;
+        final sentIdx = _messages[chatId]!.indexWhere((m) => m.id == messageId);
+        if (sentIdx != -1) {
+          _messages[chatId]![sentIdx] = message;
         }
         notifyListeners();
-        
-        await _firestoreService.sendMessage(chatId, message);
+
+        final chatIndex2 = _chats.indexWhere((c) => c.id == chatId);
+        final otherIds = chatIndex2 != -1
+            ? _chats[chatIndex2].participantIds.where((id) => id != effectiveSenderId).toList()
+            : <String>[];
+        await _firestoreService.sendMessage(chatId, message, otherParticipantIds: otherIds);
         debugPrint('ChatProvider: Message synced to Firestore');
       } catch (e) {
         debugPrint('ChatProvider: Failed to sync message to Firestore: $e');
         // Mark message as pending
-        message.status = MessageStatus.pending;
-        
+        message = message.copyWith(status: MessageStatus.pending);
+
         // Update local
-        final msgIndex = _messages[chatId]!.indexWhere((m) => m.id == messageId);
-        if (msgIndex != -1) {
-          _messages[chatId]![msgIndex] = message;
+        final pendingIdx = _messages[chatId]!.indexWhere((m) => m.id == messageId);
+        if (pendingIdx != -1) {
+          _messages[chatId]![pendingIdx] = message;
         }
         notifyListeners();
-        
+
         // Save pending status to local DB
         await DatabaseService.saveMessage(message);
       }
@@ -306,13 +338,91 @@ class ChatProvider extends ChangeNotifier {
       name: otherParticipants.map((u) => u.name).join(', '),
       type: otherParticipants.length > 1 ? ChatType.group : ChatType.private,
       participants: uniqueParticipants,
-      unreadCount: 0,
+      unreadCounts: const {},
       createdAt: DateTime.now(),
       adminIds: [_currentUserId!],
     );
 
     final chatId = await _firestoreService.createChat(newChat);
     return chatId;
+  }
+
+  /// Retry sending a failed/pending message by re-attempting Firestore sync
+  Future<void> retryMessage(String chatId, String messageId) async {
+    final msgs = _messages[chatId];
+    if (msgs == null) return;
+
+    final msgIndex = msgs.indexWhere((m) => m.id == messageId);
+    if (msgIndex == -1) return;
+
+    final original = msgs[msgIndex];
+    if (original.status != MessageStatus.failed && original.status != MessageStatus.pending) return;
+
+    // Mark as sending
+    _messages[chatId]![msgIndex] = original.copyWith(status: MessageStatus.sending);
+    notifyListeners();
+
+    try {
+      final toSend = _messages[chatId]![msgIndex].copyWith(status: MessageStatus.sent);
+      _messages[chatId]![msgIndex] = toSend;
+      notifyListeners();
+
+      final chatIdx = _chats.indexWhere((c) => c.id == chatId);
+      final retryOtherIds = chatIdx != -1
+          ? _chats[chatIdx].participantIds.where((id) => id != toSend.senderId).toList()
+          : <String>[];
+      await _firestoreService.sendMessage(chatId, toSend, otherParticipantIds: retryOtherIds);
+      await DatabaseService.saveMessage(toSend);
+      debugPrint('ChatProvider: Retry succeeded for message $messageId');
+    } catch (e) {
+      debugPrint('ChatProvider: Retry failed for message $messageId: $e');
+      final failedMsg = _messages[chatId]!
+          .firstWhere((m) => m.id == messageId, orElse: () => original)
+          .copyWith(status: MessageStatus.pending);
+      final failedIdx = _messages[chatId]!.indexWhere((m) => m.id == messageId);
+      if (failedIdx != -1) {
+        _messages[chatId]![failedIdx] = failedMsg;
+        await DatabaseService.saveMessage(failedMsg);
+      }
+      notifyListeners();
+    }
+  }
+
+  /// Mark all messages in a chat as read and sync the local unreadCount to 0
+  Future<void> markMessagesAsRead(String chatId) async {
+    if (_currentUserId == null) return;
+
+    // Update local _chats list immediately
+    final chatIndex = _chats.indexWhere((c) => c.id == chatId);
+    if (chatIndex != -1 && _chats[chatIndex].getUnreadCount(_currentUserId) != 0) {
+      final updated = Map<String, dynamic>.from(_chats[chatIndex].unreadCounts);
+      updated[_currentUserId!] = 0;
+      _chats[chatIndex] = _chats[chatIndex].copyWith(unreadCounts: updated);
+      notifyListeners();
+    }
+
+    // Update individual message statuses locally and in Firestore
+    final messages = _messages[chatId];
+    if (messages != null) {
+      for (var i = 0; i < messages.length; i++) {
+        final msg = messages[i];
+        // If it's a message from someone else and not already read
+        if (msg.senderId != _currentUserId && msg.status != MessageStatus.read) {
+          final updatedMsg = msg.copyWith(status: MessageStatus.read);
+          messages[i] = updatedMsg;
+          _firestoreService.updateMessageStatus(chatId, msg.id, MessageStatus.read);
+          DatabaseService.saveMessage(updatedMsg);
+        }
+      }
+      notifyListeners();
+    }
+
+    // Persist to Firestore (chat-level unread count)
+    try {
+      await _firestoreService.markMessagesAsRead(chatId, _currentUserId!);
+    } catch (e) {
+      debugPrint('ChatProvider: Failed to mark messages as read: $e');
+    }
   }
 
   Future<void> deleteChat(String chatId) async {
@@ -368,6 +478,7 @@ class ChatProvider extends ChangeNotifier {
   void dispose() {
     _chatsSubscription?.cancel();
     _messageSubscriptions.values.forEach((sub) => sub.cancel());
+    _presenceSubscriptions.values.forEach((sub) => sub.cancel());
     super.dispose();
   }
 }

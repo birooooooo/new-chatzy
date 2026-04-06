@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:ui';
 import 'dart:async';
 import 'dart:io';
@@ -75,31 +76,50 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     
     // Subscribe to real-time messages for this chat
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<ChatProvider>(context, listen: false).subscribeToMessages(widget.chatId);
+      final chatProvider = Provider.of<ChatProvider>(context, listen: false);
+      chatProvider.subscribeToMessages(widget.chatId, autoMarkAsRead: true);
+      chatProvider.markMessagesAsRead(widget.chatId);
     });
+  }
+
+  ChatProvider? _chatProvider;
+  bool _disposed = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _chatProvider ??= Provider.of<ChatProvider>(context, listen: false);
+  }
+
+  @override
+  void deactivate() {
+    // Unsubscribe BEFORE widgets are deactivated to prevent notifyListeners
+    // from reaching Consumer widgets that are being torn down
+    _chatProvider?.unsubscribeFromMessages(widget.chatId);
+    _chatProvider?.setTypingStatus(widget.chatId, false);
+    super.deactivate();
   }
 
   @override
   void dispose() {
-    // Unsubscribe from real-time messages for this chat to save resources
-    Provider.of<ChatProvider>(context, listen: false).unsubscribeFromMessages(widget.chatId);
-    
+    _disposed = true;
+    _debounceTimer?.cancel();
+    _resetTimer?.cancel();
+    _messageController.removeListener(_onTextChanged);
     _messageController.dispose();
     _scrollController.dispose();
     _focusNode.dispose();
-    _debounceTimer?.cancel();
-    _resetTimer?.cancel();
     super.dispose();
   }
 
   void _onTextChanged() {
     final text = _messageController.text;
     if (text.length >= 3 && !_showSuggestions) {
-      setState(() => _showSuggestions = true);
+      _safeSetState(() => _showSuggestions = true);
     } else if (text.length < 3 && _showSuggestions) {
-      setState(() => _showSuggestions = false);
+      _safeSetState(() => _showSuggestions = false);
     }
-    setState(() => _isTyping = text.isNotEmpty);
+    _safeSetState(() => _isTyping = text.isNotEmpty);
 
     // Sync typing status with provider
     final chatProvider = Provider.of<ChatProvider>(context, listen: false);
@@ -114,6 +134,10 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     }
   }
 
+  void _safeSetState(VoidCallback fn) {
+    if (!_disposed && mounted) setState(fn);
+  }
+
   Future<void> _analyzeMood(String text) async {
     // Cancel any pending reset
     _resetTimer?.cancel();
@@ -126,11 +150,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       mood = await _aiService.analyzeSentiment(text);
     }
     
-    if (!mounted) return;
-
-    setState(() {
-      // _myMood removed, used provider instead
-    });
+    if (_disposed || !mounted) return;
     
     Provider.of<CharacterProvider>(context, listen: false).setMood(mood);
 
@@ -224,7 +244,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     if (_messageController.text.trim().isEmpty) return;
 
     if (!_hasStartedChatting) {
-      setState(() => _hasStartedChatting = true);
+      _safeSetState(() => _hasStartedChatting = true);
     }
 
     // Trigger immediate analysis on send to capture the final sentiment
@@ -240,7 +260,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     // Reset typing status on send
     chatProvider.setTypingStatus(widget.chatId, false);
 
-    setState(() {
+    _safeSetState(() {
       _showSuggestions = false;
       _replyingTo = null;
     });
@@ -261,42 +281,52 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['jpg', 'jpeg', 'png', 'gif', 'pdf', 'doc', 'docx'],
+        withData: kIsWeb, // On web we need bytes, not path
       );
 
-      if (result != null && result.files.single.path != null) {
-        final filePath = result.files.single.path!;
-        final fileExtension = result.files.single.extension?.toLowerCase();
-        
-        MessageType type = MessageType.file;
-        if (['jpg', 'jpeg', 'png', 'gif'].contains(fileExtension)) {
-          type = MessageType.image;
-        }
-        
-        final chatProvider = Provider.of<ChatProvider>(context, listen: false);
-        chatProvider.addMessage(
-          widget.chatId, 
-          filePath, 
-          type: type,
-        );
+      if (result == null) return;
+      final file = result.files.single;
+      final ext = file.extension?.toLowerCase() ?? '';
+      final isImage = ['jpg', 'jpeg', 'png', 'gif'].contains(ext);
+      final type = isImage ? MessageType.image : MessageType.file;
 
-        if (_scrollController.hasClients) {
-          _scrollController.animateTo(
-            0,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOut,
-          );
+      final chatProvider = Provider.of<ChatProvider>(context, listen: false);
+
+      if (kIsWeb) {
+        // On web: upload bytes directly to Firebase Storage
+        final bytes = file.bytes;
+        if (bytes == null) return;
+        final storageService = chatProvider.storageService;
+        final url = await storageService.uploadChatImageBytes(
+          bytes, widget.chatId, file.name,
+        );
+        if (url != null) {
+          chatProvider.addMessage(widget.chatId, url, type: type);
         }
+      } else {
+        // On mobile/desktop: use file path
+        final path = file.path;
+        if (path == null) return;
+        chatProvider.addMessage(widget.chatId, path, type: type);
+      }
+
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(0,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut);
       }
     } catch (e) {
       debugPrint('Error picking file: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to pick file')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to pick file')),
+        );
+      }
     }
   }
 
   void _useSuggestion(String suggestion) {
-    setState(() {
+    _safeSetState(() {
       _messageController.text = suggestion;
       _messageController.selection = TextSelection.fromPosition(
         TextPosition(offset: suggestion.length),
@@ -315,6 +345,17 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       appBar: _buildAppBar(),
       body: Stack(
         children: [
+          // Global Doodle Background
+          Positioned.fill(
+            child: Opacity(
+              opacity: themeProvider.isLightTheme ? 0.15 : 0.08, // Subtle opacity for better contrast
+              child: Image.asset(
+                'assets/images/doodle_bg.jpg',
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+          
           // 3D Background Character
           _build3DCharacters(),
           
@@ -382,8 +423,8 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       child: GlassContainer(
         margin: EdgeInsets.only(
           top: MediaQuery.of(context).padding.top + 8,
-          left: 16,
-          right: 16,
+          left: 6,
+          right: 6,
         ),
         borderRadius: BorderRadius.circular(24),
         blur: 20,
@@ -492,25 +533,42 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   Widget _buildMessagesList(List<MessageModel> messages) {
     return ListView.builder(
       controller: _scrollController,
-      reverse: true, // Key for chat scrolling stability
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+      reverse: true,
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 20),
       physics: const BouncingScrollPhysics(),
       itemCount: messages.length,
       itemBuilder: (context, index) {
         final chatProvider = Provider.of<ChatProvider>(context, listen: false);
         final message = messages[index];
         final isMe = message.senderId == (chatProvider.currentUserId ?? 'me');
-        // Mocking edited/deleted for now as they are not in our provider yet
         final isDeleted = false;
         final isEdited = false;
         final timeStr = DateFormat.jm().format(message.timestamp);
-        
-        final replyMessage = message.replyToId != null 
-            ? messages.firstWhere((m) => m.id == message.replyToId, orElse: () => MessageModel(id: '', chatId: '', senderId: '', content: 'Deleted message', timestamp: DateTime.now()))
+
+        // Grouping: reversed list → index+1 is older (above), index-1 is newer (below)
+        final olderMsg = index + 1 < messages.length ? messages[index + 1] : null;
+        final newerMsg = index - 1 >= 0 ? messages[index - 1] : null;
+
+        bool _withinHour(MessageModel a, MessageModel b) =>
+            a.timestamp.difference(b.timestamp).abs().inMinutes < 60;
+
+        final isGroupedWithAbove = olderMsg != null &&
+            olderMsg.senderId == message.senderId &&
+            _withinHour(message, olderMsg);
+
+        final isGroupedWithBelow = newerMsg != null &&
+            newerMsg.senderId == message.senderId &&
+            _withinHour(message, newerMsg);
+
+        final replyMessage = message.replyToId != null
+            ? messages.firstWhere(
+                (m) => m.id == message.replyToId,
+                orElse: () => MessageModel(
+                    id: '', chatId: '', senderId: '', content: 'Deleted message', timestamp: DateTime.now()))
             : null;
-        
+
         return SwipeToReply(
-          onReply: () => setState(() => _replyingTo = message),
+          onReply: () => _safeSetState(() => _replyingTo = message),
           child: GestureDetector(
             onLongPress: () => _showMessageActions(context, message),
             child: _GlassMessageBubble(
@@ -522,17 +580,22 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
               status: message.status,
               reactions: message.reactions,
               replyToContent: replyMessage?.content,
-              replyToName: replyMessage != null ? (replyMessage.senderId == 'me' ? 'Me' : widget.chatName) : null,
-              onReactionTap: (emoji) => chatProvider.addReaction(widget.chatId, message.id, emoji),
-              type: message.type,
-              filePath: (message.type == MessageType.image || message.type == MessageType.file) && !message.content.startsWith('http') 
-                  ? message.content 
+              replyToName: replyMessage != null
+                  ? (replyMessage.senderId == 'me' ? 'Me' : widget.chatName)
                   : null,
+              onReactionTap: (emoji) =>
+                  chatProvider.addReaction(widget.chatId, message.id, emoji),
+              type: message.type,
+              filePath: (message.type == MessageType.image ||
+                          message.type == MessageType.file) &&
+                      !message.content.startsWith('http')
+                  ? message.content
+                  : null,
+              isGroupedWithAbove: isGroupedWithAbove,
+              isGroupedWithBelow: isGroupedWithBelow,
             ),
           ),
-        ).animate()
-          .fadeIn(duration: 200.ms)
-          .slideY(begin: 0.1, end: 0); // Slide up because reversed
+        ).animate().fadeIn(duration: 200.ms).slideY(begin: 0.1, end: 0);
       },
     );
   }
@@ -581,7 +644,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
               leading: const Icon(Icons.reply_rounded, color: Colors.white),
               title: const Text('Reply', style: TextStyle(color: Colors.white)),
               onTap: () {
-                setState(() => _replyingTo = message);
+                _safeSetState(() => _replyingTo = message);
                 Navigator.pop(context);
                 _focusNode.requestFocus();
               },
@@ -617,13 +680,17 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     final themeProvider = Provider.of<ThemeProvider>(context);
     if (_isRecording) {
       return Padding(
-        padding: EdgeInsets.fromLTRB(16, 10, 16, MediaQuery.of(context).padding.bottom + 10),
+        padding: EdgeInsets.fromLTRB(6, 10, 6, MediaQuery.of(context).padding.bottom + 10),
         child: VoiceRecorder(
-          onCancel: () => setState(() => _isRecording = false),
+          onCancel: () {
+            _safeSetState(() => _isRecording = false);
+            Provider.of<CharacterProvider>(context, listen: false).setMood('happy');
+          },
           onSend: (path, duration) {
             final chatProvider = Provider.of<ChatProvider>(context, listen: false);
             chatProvider.addMessage(widget.chatId, path, type: MessageType.audio);
-            setState(() => _isRecording = false);
+            _safeSetState(() => _isRecording = false);
+            Provider.of<CharacterProvider>(context, listen: false).setMood('celebrate');
           },
         ),
       );
@@ -632,8 +699,8 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     return Padding(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).padding.bottom + 10,
-        left: 16,
-        right: 16,
+        left: 6,
+        right: 6,
         top: 10,
       ),
       child: Column(
@@ -650,14 +717,20 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                   ? [Colors.black.withOpacity(0.05), Colors.black.withOpacity(0.03)]
                   : [Colors.white.withOpacity(0.12), Colors.white.withOpacity(0.08)],
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
             child: Row(
               children: [
                 IconButton(
+                  iconSize: 20,
+                  padding: const EdgeInsets.all(6),
+                  constraints: const BoxConstraints(),
                   icon: Icon(Icons.add_circle_outline_rounded, color: Colors.white.withOpacity(0.7)),
                   onPressed: () => _pickFile(),
                 ),
                 IconButton(
+                  iconSize: 20,
+                  padding: const EdgeInsets.all(6),
+                  constraints: const BoxConstraints(),
                   icon: Icon(Icons.gif_box_outlined, color: Colors.white.withOpacity(0.7)),
                   onPressed: () => _showGifPicker(),
                 ),
@@ -665,12 +738,12 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                   child: TextField(
                     controller: _messageController,
                     focusNode: _focusNode,
-                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                    style: const TextStyle(fontSize: 13),
                     decoration: InputDecoration(
                       hintText: 'iMessage...',
-                      hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4)),
+                      hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4), fontSize: 13),
                       border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       isDense: true,
                     ),
                     textInputAction: TextInputAction.send,
@@ -679,23 +752,29 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                 ),
                 if (!_isTyping) ...[
                   IconButton(
+                    iconSize: 20,
+                    padding: const EdgeInsets.all(6),
+                    constraints: const BoxConstraints(),
                     icon: Icon(
-                      Icons.mic_none_rounded, 
+                      Icons.mic_none_rounded,
                       color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                     ),
-                    onPressed: () => setState(() => _isRecording = true),
+                    onPressed: () {
+                      _safeSetState(() => _isRecording = true);
+                      Provider.of<CharacterProvider>(context, listen: false).setMood('recording');
+                    },
                   ),
                 ] else ...[
                   GestureDetector(
                     onTap: _sendMessage,
                     child: Container(
-                      width: 34,
-                      height: 34,
+                      width: 28,
+                      height: 28,
                       decoration: BoxDecoration(
-                        color: AppTheme.info, // iOS Blue
+                        color: AppTheme.info,
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.arrow_upward_rounded, color: Colors.white, size: 20),
+                      child: const Icon(Icons.arrow_upward_rounded, color: Colors.white, size: 16),
                     ),
                   ).animate().scale(),
                 ],
@@ -849,7 +928,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
           ),
           IconButton(
             icon: const Icon(Icons.close_rounded, size: 20, color: Colors.white54),
-            onPressed: () => setState(() => _replyingTo = null),
+            onPressed: () => _safeSetState(() => _replyingTo = null),
           ),
         ],
       ),
@@ -958,6 +1037,9 @@ class _GlassMessageBubble extends StatelessWidget {
   final MessageType type;
   final bool isAdmin;
 
+  final bool isGroupedWithAbove;
+  final bool isGroupedWithBelow;
+
   const _GlassMessageBubble({
     required this.text,
     required this.isMe,
@@ -973,6 +1055,8 @@ class _GlassMessageBubble extends StatelessWidget {
     this.onReactionTap,
     this.type = MessageType.text,
     this.isAdmin = false,
+    this.isGroupedWithAbove = false,
+    this.isGroupedWithBelow = false,
   });
 
   @override
@@ -1015,7 +1099,8 @@ class _GlassMessageBubble extends StatelessWidget {
               children: [
                 Container(
             margin: EdgeInsets.only(
-              bottom: 4,
+              bottom: isGroupedWithBelow ? 1 : 3,
+              top: isGroupedWithAbove ? 1 : 4,
               left: isMe ? 60 : 0,
               right: isMe ? 0 : 60,
             ),
@@ -1032,34 +1117,21 @@ class _GlassMessageBubble extends StatelessWidget {
                       _openGallery(context);
                     }
                   },
-                  child: GlassContainer(
-                    borderRadius: BorderRadius.only(
-                      topLeft: const Radius.circular(22),
-                      topRight: const Radius.circular(22),
-                      bottomLeft: Radius.circular(isMe ? 22 : 4),
-                      bottomRight: Radius.circular(isMe ? 4 : 22),
-                    ),
-                    blur: 15,
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: isMe
-                        ? [
-                            AppTheme.myMessageBubble.withOpacity(0.95),
-                            AppTheme.myMessageBubble.withOpacity(0.85),
-                          ]
-                        : [
-                            AppTheme.partnerMessageBubble.withOpacity(0.95),
-                            AppTheme.partnerMessageBubble.withOpacity(0.85),
-                          ],
-                    ),
-                    border: Border.all(
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(isMe ? 0.25 : 0.1),
-                      width: 0.8,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: isMe
+                          ? const Color(0xFF6C63FF)
+                          : const Color(0xFF2A3347),
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(isMe ? 22 : (isGroupedWithAbove ? 6 : 22)),
+                        topRight: Radius.circular(isMe ? (isGroupedWithAbove ? 6 : 22) : 22),
+                        bottomLeft: Radius.circular(isMe ? 22 : (isGroupedWithBelow ? 6 : 22)),
+                        bottomRight: Radius.circular(isMe ? (isGroupedWithBelow ? 6 : 22) : 22),
+                      ),
                     ),
                     padding: (type == MessageType.image || text.startsWith('POLL:'))
-                        ? EdgeInsets.zero 
-                        : const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        ? EdgeInsets.zero
+                        : const EdgeInsets.fromLTRB(12, 6, 12, 5),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -1073,6 +1145,28 @@ class _GlassMessageBubble extends StatelessWidget {
                           _buildAudioContent(context)
                         else
                           _buildTextContent(context),
+                        // Time + status inside bubble
+                        if (type == MessageType.text || type == MessageType.file || type == MessageType.audio)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 2),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                Text(
+                                  time,
+                                  style: TextStyle(
+                                    color: Colors.white.withOpacity(0.55),
+                                    fontSize: 10,
+                                  ),
+                                ),
+                                if (isMe) ...[
+                                  const SizedBox(width: 3),
+                                  _buildStatusIcon(),
+                                ],
+                              ],
+                            ),
+                          ),
                       ],
                     ),
                   ),
@@ -1085,23 +1179,6 @@ class _GlassMessageBubble extends StatelessWidget {
             ),
           ),
           
-                // Timestamp & Status
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 16, left: 4, right: 4),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        time,
-                        style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4), fontSize: 11),
-                      ),
-                      if (isMe) ...[
-                        const SizedBox(width: 4),
-                        _buildStatusIcon(),
-                      ],
-                    ],
-                  ),
-                ),
               ],
             ),
           ),
@@ -1236,10 +1313,11 @@ class _GlassMessageBubble extends StatelessWidget {
     return Text(
       isDeleted ? '🚫 This message was deleted' : text,
       style: TextStyle(
-        color: isDeleted 
-            ? Theme.of(context).colorScheme.onSurface.withOpacity(0.5) 
+        color: isDeleted
+            ? Theme.of(context).colorScheme.onSurface.withOpacity(0.5)
             : (isMe ? Colors.white : Theme.of(context).colorScheme.onSurface),
-        fontSize: 16,
+        fontSize: 14,
+        height: 1.3,
         fontStyle: isDeleted ? FontStyle.italic : FontStyle.normal,
       ),
     );
@@ -1281,32 +1359,31 @@ class _GlassMessageBubble extends StatelessWidget {
   }
 
   Widget _buildStatusIcon() {
-    IconData icon;
-    Color color = Colors.white.withOpacity(0.4);
-    
     switch (status) {
       case MessageStatus.sending:
-        return const SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 1.5, valueColor: AlwaysStoppedAnimation(Colors.white54)));
-      case MessageStatus.sent:
-        icon = Icons.check;
-        break;
-      case MessageStatus.delivered:
-        icon = Icons.done_all;
-        break;
-      case MessageStatus.read:
-        icon = Icons.done_all;
-        color = AppTheme.secondary; // Blue ticks
-        break;
-      case MessageStatus.failed:
-        icon = Icons.error_outline;
-        color = Colors.redAccent;
-        break;
       case MessageStatus.pending:
-        return const SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 1.5, valueColor: AlwaysStoppedAnimation(Colors.white54)));
+        return const SizedBox(
+          width: 12,
+          height: 12,
+          child: CircularProgressIndicator(
+            strokeWidth: 1.5,
+            valueColor: AlwaysStoppedAnimation(Colors.white54),
+          ),
+        );
+      case MessageStatus.sent:
+        // Single grey check
+        return const Icon(Icons.check, size: 14, color: Colors.grey);
+      case MessageStatus.delivered:
+        // Double grey check
+        return const Icon(Icons.done_all, size: 16, color: Colors.grey);
+      case MessageStatus.read:
+        // Double blue check (iOS/WhatsApp style)
+        return const Icon(Icons.done_all, size: 16, color: Color(0xFF34B7F1));
+      case MessageStatus.failed:
+        return const Icon(Icons.error_outline, size: 14, color: Colors.redAccent);
     }
-    
-    return Icon(icon, size: 14, color: color);
   }
+
 
   IconData _getFileIcon() {
     switch (fileType) {

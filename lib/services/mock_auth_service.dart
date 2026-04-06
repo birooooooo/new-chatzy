@@ -29,6 +29,8 @@ class MockAuthService extends AuthService {
     required String password,
     String? name,
     String? username,
+    String? phone,
+    String? avatarPath,
   }) async {
     await Future.delayed(const Duration(seconds: 1));
     _isLoggedIn = true;

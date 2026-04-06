@@ -6,7 +6,15 @@
       "Bash(taskkill /F /IM \"flutter.bat\" /T)",
       "Bash(taskkill /F /IM \"chrome.exe\" /T)",
       "Bash(cmd /c \"taskkill /F /IM dart.exe /T 2>nul & taskkill /F /IM java.exe /T 2>nul & echo done\")",
-      "Bash(cmd /c \"rmdir /s /q \"\"C:\\\\Users\\\\berha\\\\OneDrive\\\\Desktop\\\\v0\\\\build\"\" 2>nul & echo cleaned\")"
+      "Bash(cmd /c \"rmdir /s /q \"\"C:\\\\Users\\\\berha\\\\OneDrive\\\\Desktop\\\\v0\\\\build\"\" 2>nul & echo cleaned\")",
+      "WebFetch(domain:pub.dev)",
+      "Bash(rd /s /q \"C:\\\\Users\\\\berha\\\\.gradle\\\\caches\")",
+      "Bash(./gradlew --stop)",
+      "Bash(flutter doctor:*)",
+      "Bash(flutter config:*)",
+      "Bash(where blender:*)",
+      "Read(//c/Program Files/**)",
+      "Read(//c/Users/berha/AppData/Local/Programs/**)"
     ]
   }
 }

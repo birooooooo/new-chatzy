@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip install:*)",
+      "Bash(python -c \"import pygltflib; print\\('ok'\\)\")",
+      "Bash(python inspect_huggy.py)",
+      "Bash(python create_wave_anim.py)"
+    ]
+  }
+}

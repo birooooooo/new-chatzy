@@ -25,6 +25,103 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  void _showForgotPasswordDialog() {
+    final emailController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        bool isSending = false;
+        return StatefulBuilder(
+          builder: (ctx, setDialogState) {
+            return AlertDialog(
+              backgroundColor: const Color(0xFF1E1E2E),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: const Text(
+                'Reset Password',
+                style: TextStyle(color: Colors.white),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Enter your email address and we\'ll send you a link to reset your password.',
+                    style: TextStyle(color: Colors.white70, fontSize: 14),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      hintText: 'Email address',
+                      hintStyle: const TextStyle(color: Colors.white38),
+                      prefixIcon: const Icon(Icons.email_outlined, color: Colors.white54),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(color: Colors.white24),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide(color: AppTheme.secondary),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+                ),
+                TextButton(
+                  onPressed: isSending
+                      ? null
+                      : () async {
+                          final email = emailController.text.trim();
+                          if (email.isEmpty || !email.contains('@')) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Please enter a valid email address')),
+                            );
+                            return;
+                          }
+                          setDialogState(() => isSending = true);
+                          try {
+                            final authService = Provider.of<AuthService>(context, listen: false);
+                            await authService.resetPassword(email);
+                            if (mounted) {
+                              Navigator.of(dialogContext).pop();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Password reset email sent. Check your inbox.'),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            setDialogState(() => isSending = false);
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Error: ${e.toString()}')),
+                              );
+                            }
+                          }
+                        },
+                  child: isSending
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Text('Send Reset Link', style: TextStyle(color: AppTheme.secondary)),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   void _login() async {
     if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -175,7 +272,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     Align(
                       alignment: Alignment.centerRight,
                       child: TextButton(
-                        onPressed: () {},
+                        onPressed: _showForgotPasswordDialog,
                         child: Text(
                           'Forgot Password?',
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(

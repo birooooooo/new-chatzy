@@ -55,8 +55,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Padding(
       padding: EdgeInsets.only(
-        left: 20,
-        right: 20,
+        left: 8,
+        right: 8,
         bottom: bottomPadding + 16,
       ),
       child: LayoutBuilder(
@@ -66,43 +66,45 @@ class _HomeScreenState extends State<HomeScreen> {
           final pillLeft = _currentIndex * itemWidth + itemWidth * 0.06;
           final pillWidth = itemWidth * 0.88;
 
-          // Outer pill — same GlassContainer style as chat items
-          return GlassContainer(
-            height: 72,
+          return ClipRRect(
             borderRadius: BorderRadius.circular(36),
-            blur: 20,
-            opacity: 0.06,
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Colors.white.withOpacity(0.10),
-                Colors.white.withOpacity(0.04),
-              ],
-            ),
-            child: Stack(
-              children: [
-                // ── Animated selected pill ────────────────────────────
-                AnimatedPositioned(
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeInOut,
-                  left: pillLeft,
-                  top: 8,
-                  width: pillWidth,
-                  height: 56,
-                  child: _GlassPill(),
-                ),
-
-                // ── Nav icons + labels ────────────────────────────────
-                Positioned.fill(
-                  child: Row(
-                    children: [
-                      for (int i = 0; i < _navItems.length; i++)
-                        Expanded(child: _buildNavItem(i)),
-                    ],
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+              child: Container(
+                height: 62,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(36),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.15),
+                    width: 0.8,
                   ),
                 ),
-              ],
+                child: Stack(
+                  children: [
+                    // Selected pill
+                    AnimatedPositioned(
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
+                      left: pillLeft,
+                      top: 6,
+                      width: pillWidth,
+                      height: 50,
+                      child: _GlassPill(),
+                    ),
+
+                    // Icons & labels
+                    Positioned.fill(
+                      child: Row(
+                        children: [
+                          for (int i = 0; i < _navItems.length; i++)
+                            Expanded(child: _buildNavItem(i)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           );
         },
@@ -126,9 +128,7 @@ class _HomeScreenState extends State<HomeScreen> {
             curve: Curves.easeOut,
             child: Icon(
               icon,
-              color: isSelected
-                  ? Colors.white
-                  : Colors.white.withOpacity(0.32),
+              color: isSelected ? Colors.white : Colors.white.withOpacity(0.55),
               size: 22,
             ),
           ),
@@ -136,12 +136,9 @@ class _HomeScreenState extends State<HomeScreen> {
           AnimatedDefaultTextStyle(
             duration: const Duration(milliseconds: 220),
             style: TextStyle(
-              color: isSelected
-                  ? Colors.white
-                  : Colors.white.withOpacity(0.32),
+              color: isSelected ? Colors.white : Colors.white.withOpacity(0.55),
               fontSize: 10,
-              fontWeight:
-                  isSelected ? FontWeight.w500 : FontWeight.w400,
+              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
             ),
             child: Text(label),
           ),
@@ -151,8 +148,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-/// Selected-tab glass pill — matches the GlassContainer style used in
-/// chat list items, with an extra bright lens glow at the top.
 class _GlassPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -162,7 +157,6 @@ class _GlassPill extends StatelessWidget {
         filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
         child: Stack(
           children: [
-            // Base glass layer — same opacity/gradient as chat items
             Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(26),
@@ -170,18 +164,17 @@ class _GlassPill extends StatelessWidget {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    Colors.white.withOpacity(0.13),
-                    Colors.white.withOpacity(0.05),
+                    Colors.white.withOpacity(0.18),
+                    Colors.white.withOpacity(0.06),
                   ],
                 ),
                 border: Border.all(
-                  color: Colors.white.withOpacity(0.18),
+                  color: Colors.white.withOpacity(0.2),
                   width: 0.8,
                 ),
               ),
             ),
-
-            // Bright top lens glow (the key visual from the reference image)
+            // Top lens glow
             Positioned(
               top: -6,
               left: 14,
@@ -194,8 +187,8 @@ class _GlassPill extends StatelessWidget {
                     center: Alignment.topCenter,
                     radius: 0.85,
                     colors: [
-                      Colors.white.withOpacity(0.60),
-                      Colors.white.withOpacity(0.18),
+                      Colors.white.withOpacity(0.65),
+                      Colors.white.withOpacity(0.2),
                       Colors.transparent,
                     ],
                     stops: const [0.0, 0.45, 1.0],

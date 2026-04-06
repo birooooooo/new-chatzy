@@ -82,10 +82,10 @@ class FirestoreService {
   }
   
   /// Send a message
-  Future<void> sendMessage(String chatId, MessageModel message) async {
+  Future<void> sendMessage(String chatId, MessageModel message, {List<String> otherParticipantIds = const []}) async {
     try {
       final batch = _firestore.batch();
-      
+
       // Add message
       final messageRef = _firestore
           .collection('chats')
@@ -93,14 +93,23 @@ class FirestoreService {
           .collection('messages')
           .doc(message.id);
       batch.set(messageRef, message.toFirestore());
-      
-      // Update chat's last message and timestamp, creating the chat document if it doesn't exist
+
+      // Build unread count increments for all other participants
+      final Map<String, dynamic> unreadIncrements = {};
+      for (final uid in otherParticipantIds) {
+        if (uid != message.senderId) {
+          unreadIncrements['unreadCount.$uid'] = FieldValue.increment(1);
+        }
+      }
+
+      // Update chat's last message, timestamp, and unread counts
       final chatRef = _firestore.collection('chats').doc(chatId);
       batch.set(chatRef, {
         'lastMessage': message.toMap(),
         'updatedAt': FieldValue.serverTimestamp(),
+        ...unreadIncrements,
       }, SetOptions(merge: true));
-      
+
       await batch.commit();
     } catch (e) {
       debugPrint('Error sending message: $e');
@@ -183,6 +192,23 @@ class FirestoreService {
       });
     } catch (e) {
       debugPrint('Error marking messages as read: $e');
+      rethrow;
+    }
+  }
+
+  /// Update the status of a specific message
+  Future<void> updateMessageStatus(String chatId, String messageId, MessageStatus status) async {
+    try {
+      await _firestore
+          .collection('chats')
+          .doc(chatId)
+          .collection('messages')
+          .doc(messageId)
+          .update({
+        'status': status.index,
+      });
+    } catch (e) {
+      debugPrint('Error updating message status: $e');
       rethrow;
     }
   }

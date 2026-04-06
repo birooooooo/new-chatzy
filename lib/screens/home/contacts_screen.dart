@@ -75,7 +75,7 @@ class _ContactsScreenState extends State<ContactsScreen> {
         name: user.name,
         type: ChatType.private,
         participants: [user],
-        unreadCount: 0,
+        unreadCounts: const {},
         isPinned: false,
         isMuted: false, 
         adminIds: [],

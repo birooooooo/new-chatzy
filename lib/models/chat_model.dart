@@ -14,7 +14,7 @@ class ChatModel {
   final ChatType type;
   final List<UserModel> participants;
   final MessageModel? lastMessage;
-  final int unreadCount;
+  final Map<String, dynamic> unreadCounts; // Changed from int to Map for per-user tracking
   final bool isPinned;
   final bool isMuted;
   final String? avatar;
@@ -30,7 +30,7 @@ class ChatModel {
     this.type = ChatType.private,
     required this.participants,
     this.lastMessage,
-    this.unreadCount = 0,
+    this.unreadCounts = const {}, // Changed default
     this.isPinned = false,
     this.isMuted = false,
     this.avatar,
@@ -40,6 +40,14 @@ class ChatModel {
     this.typingUserId,
     this.adminIds = const [],
   });
+
+  // Getter for total or individual unread count
+  int getUnreadCount(String? userId) {
+    if (userId == null) return 0;
+    final count = unreadCounts[userId];
+    if (count is int) return count;
+    return 0;
+  }
 
   bool get isGroup => type == ChatType.group;
   bool get isAI => type == ChatType.ai;
@@ -73,7 +81,7 @@ class ChatModel {
     ChatType? type,
     List<UserModel>? participants,
     MessageModel? lastMessage,
-    int? unreadCount,
+    Map<String, dynamic>? unreadCounts, // Updated
     bool? isPinned,
     bool? isMuted,
     String? avatar,
@@ -89,7 +97,7 @@ class ChatModel {
       type: type ?? this.type,
       participants: participants ?? this.participants,
       lastMessage: lastMessage ?? this.lastMessage,
-      unreadCount: unreadCount ?? this.unreadCount,
+      unreadCounts: unreadCounts ?? this.unreadCounts, // Updated
       isPinned: isPinned ?? this.isPinned,
       isMuted: isMuted ?? this.isMuted,
       avatar: avatar ?? this.avatar,
@@ -107,7 +115,7 @@ class ChatModel {
       'name': name,
       'type': type.index,
       'avatar': avatar,
-      'unreadCount': unreadCount,
+      'unreadCounts': unreadCounts, // Updated
       'isPinned': isPinned ? 1 : 0,
       'isMuted': isMuted ? 1 : 0,
       'createdAt': createdAt?.toIso8601String(),
@@ -124,7 +132,7 @@ class ChatModel {
       type: ChatType.values[map['type'] ?? 0],
       participants: participants,
       lastMessage: lastMessage,
-      unreadCount: map['unreadCount'] ?? 0,
+      unreadCounts: (map['unreadCounts'] as Map?)?.cast<String, dynamic>() ?? {}, // Updated
       isPinned: map['isPinned'] == 1,
       isMuted: map['isMuted'] == 1,
       avatar: map['avatar'],
@@ -145,7 +153,7 @@ class ChatModel {
       'avatar': avatar,
       'participants': participants.map((p) => p.toMap()).toList(),
       'participantIds': participants.map((p) => p.id).toList(), // For queries
-      'unreadCount': unreadCount,
+      'unreadCount': unreadCounts, // Keeping standard key used in marksMessagesAsRead
       'isPinned': isPinned,
       'isMuted': isMuted,
       'lastMessage': lastMessage?.toMap(),
@@ -166,7 +174,7 @@ class ChatModel {
       participants: (data['participants'] as List?)
           ?.map((p) => UserModel.fromMap(p as Map<String, dynamic>))
           .toList() ?? [],
-      unreadCount: data['unreadCount'] ?? 0,
+      unreadCounts: data['unreadCount'] is Map ? (data['unreadCount'] as Map).cast<String, dynamic>() : {},
       isPinned: data['isPinned'] ?? false,
       isMuted: data['isMuted'] ?? false,
       lastMessage: data['lastMessage'] != null 

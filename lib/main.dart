@@ -15,6 +15,7 @@ import 'services/auth_service.dart';
 import 'services/mock_auth_service.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'dart:io';
+import 'dart:ui';
 
 import 'services/storage_service.dart';
 import 'services/database_service.dart';
@@ -83,13 +84,27 @@ class ChatzyApp extends StatelessWidget {
           themeMode: isLight ? ThemeMode.light : ThemeMode.dark,
           builder: (context, child) {
             ScreenSize.init(context);
+            final isNebula = themeProvider.backgroundStyle == BackgroundStyle.nebula;
             return Container(
               decoration: themeProvider.backgroundDecoration,
-              child: Stack(
-                children: [
-                  if (child != null) child,
-                ],
-              ),
+              child: isNebula
+                  ? Stack(
+                      children: [
+                        // Blur overlay only for nebula
+                        Positioned.fill(
+                          child: BackdropFilter(
+                            filter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
+                            child: Container(color: Colors.black.withOpacity(0.25)),
+                          ),
+                        ),
+                        if (child != null) child,
+                      ],
+                    )
+                  : Stack(
+                      children: [
+                        if (child != null) child,
+                      ],
+                    ),
             );
           },
           initialRoute: '/',
@@ -113,18 +128,32 @@ class AuthWrapper extends StatefulWidget {
   State<AuthWrapper> createState() => _AuthWrapperState();
 }
 
-class _AuthWrapperState extends State<AuthWrapper> {
+class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
   bool _showSplash = true;
 
   @override
   void initState() {
     super.initState();
-    // Guarantee that the new beautiful 3D Splash Screen shows for at least 3.5s
+    WidgetsBinding.instance.addObserver(this);
     Future.delayed(const Duration(milliseconds: 3500), () {
-      if (mounted) {
-        setState(() => _showSplash = false);
-      }
+      if (mounted) setState(() => _showSplash = false);
     });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final authService = Provider.of<AuthService>(context, listen: false);
+    if (state == AppLifecycleState.resumed) {
+      authService.setOnlineStatus(true);
+    } else if (state == AppLifecycleState.paused || state == AppLifecycleState.detached) {
+      authService.setOnlineStatus(false);
+    }
   }
 
   @override

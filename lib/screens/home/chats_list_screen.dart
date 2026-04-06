@@ -88,6 +88,15 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
     }
   }
 
+  String _relativeTime(DateTime t) {
+    final diff = DateTime.now().difference(t);
+    if (diff.inSeconds < 60) return 'just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    if (diff.inDays == 1) return 'yesterday';
+    return '${diff.inDays}d ago';
+  }
+
   List<ChatModel> _getFilteredChats(List<ChatModel> allChats) {
     List<ChatModel> filtered = allChats.where((c) => c.type != ChatType.ai).toList();
     
@@ -325,7 +334,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                         }
 
                         return SliverPadding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
                           sliver: SliverList(
                             delegate: SliverChildBuilderDelegate(
                               (context, index) {
@@ -335,11 +344,22 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                                 final displayName = chat.getDisplayName(currentUserId);
                                 final displayAvatar = chat.getDisplayAvatar(currentUserId);
                                 
-                                final timeStr = lastMsg != null 
-                                  ? (DateTime.now().difference(lastMsg.timestamp).inDays < 1
-                                      ? DateFormat.jm().format(lastMsg.timestamp)
-                                      : DateFormat.MMMd().format(lastMsg.timestamp))
-                                  : '';
+                                final timeStr = lastMsg != null
+                                    ? _relativeTime(lastMsg.timestamp)
+                                    : '';
+
+                                // Use live presence from provider, fall back to stale participant data
+                                final otherParticipant = (chat.type == ChatType.private && chat.participants.isNotEmpty)
+                                    ? chat.participants.firstWhere(
+                                        (p) => p.id != currentUserId,
+                                        orElse: () => chat.participants.first,
+                                      )
+                                    : null;
+                                final liveOther = otherParticipant != null
+                                    ? (chatProvider.getLiveUser(otherParticipant.id) ?? otherParticipant)
+                                    : null;
+                                final isOnline = liveOther?.isOnline ?? false;
+                                final lastSeen = liveOther?.lastSeen;
 
                                 return Builder(
                                   builder: (itemContext) {
@@ -347,8 +367,8 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                                       name: displayName,
                                       message: lastMsg?.content ?? 'No messages yet',
                                       time: timeStr,
-                                      unreadCount: chat.unreadCount,
-                                      isOnline: chat.participants.any((p) => p.id != currentUserId && p.isOnline),
+                                      unreadCount: chat.getUnreadCount(currentUserId),
+                                      isOnline: isOnline,
                                       isGroup: chat.type == ChatType.group,
                                       isPinned: chat.isPinned,
                                       imageUrl: displayAvatar,
@@ -367,7 +387,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                                               builder: (context) => ChatScreen(
                                                 chatId: chat.id,
                                                 chatName: displayName,
-                                                isOnline: chat.participants.any((p) => p.id != currentUserId && p.isOnline),
+                                                isOnline: isOnline,
                                                 imageUrl: displayAvatar,
                                               ),
                                             ),
@@ -436,7 +456,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                           name: _selectedChat!.getDisplayName(provider.currentUserId ?? ''),
                           message: _selectedChat!.lastMessage?.content ?? 'No messages yet',
                           time: '',
-                          unreadCount: _selectedChat!.unreadCount,
+                          unreadCount: _selectedChat!.getUnreadCount(provider.currentUserId),
                           isOnline: _selectedChat!.participants.any((p) => p.id != provider.currentUserId && p.isOnline),
                           isGroup: _selectedChat!.type == ChatType.group,
                           isPinned: _selectedChat!.isPinned,
@@ -692,114 +712,91 @@ class _ChatItem extends StatelessWidget {
     this.imageUrl,
   });
 
+
   @override
   Widget build(BuildContext context) {
+    final bool hasUnread = unreadCount > 0;
+    final Color textColor = Theme.of(context).colorScheme.onSurface;
+
     return GestureDetector(
       onTap: onTap,
       onLongPress: onLongPress,
-      child: GlassContainer(
-        margin: const EdgeInsets.only(bottom: 16),
-        padding: const EdgeInsets.all(12),
-        borderRadius: BorderRadius.circular(24),
-        blur: 20,
-        opacity: unreadCount > 0 ? 0.08 : 0.04,
-        border: unreadCount > 0 
-            ? Border.all(color: AppTheme.secondary.withOpacity(0.4), width: 1.5)
-            : Border.all(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.07), width: 0.5),
-        gradient: unreadCount > 0
-            ? LinearGradient(
-                colors: [AppTheme.secondary.withOpacity(0.15), Colors.transparent],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              )
-            : null,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
         child: Row(
           children: [
+            // Avatar
             AppAvatar(
               name: name,
-              size: 58,
+              size: 52,
               imageUrl: isGroup ? null : imageUrl,
               isOnline: isOnline && !isGroup,
               icon: isGroup ? Icons.group_rounded : null,
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 12),
+
+            // Name + message
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          name,
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.onSurface,
-                            fontSize: 17,
-                            fontWeight: unreadCount > 0 ? FontWeight.bold : FontWeight.w600,
-                            letterSpacing: 0.2,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      Text(
-                        time,
-                        style: TextStyle(
-                          color: unreadCount > 0
-                              ? AppTheme.secondary
-                              : Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
-                          fontSize: 12,
-                          fontWeight: unreadCount > 0 ? FontWeight.bold : FontWeight.normal,
-                        ),
-                      ),
-                    ],
+                  Text(
+                    name,
+                    style: TextStyle(
+                      color: textColor,
+                      fontSize: 15,
+                      fontWeight: hasUnread ? FontWeight.bold : FontWeight.w500,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 2),
                   Row(
                     children: [
                       Expanded(
                         child: Text(
-                          message,
+                          time.isNotEmpty ? '$message · $time' : message,
                           style: TextStyle(
-                            color: unreadCount > 0
-                                ? Theme.of(context).colorScheme.onSurface.withOpacity(0.85)
-                                : Theme.of(context).colorScheme.onSurface.withOpacity(0.35),
-                            fontSize: 14,
-                            fontWeight: unreadCount > 0 ? FontWeight.w500 : FontWeight.normal,
+                            color: hasUnread
+                                ? textColor.withOpacity(0.9)
+                                : textColor.withOpacity(0.4),
+                            fontSize: 13,
+                            fontWeight: hasUnread ? FontWeight.w600 : FontWeight.normal,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      if (unreadCount > 0)
-                        Container(
-                          margin: const EdgeInsets.only(left: 8),
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            gradient: AppTheme.primaryGradient,
-                            borderRadius: BorderRadius.circular(10),
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppTheme.secondary.withOpacity(0.3),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              )
-                            ],
-                          ),
-                          child: Text(
-                            unreadCount > 99 ? '99+' : unreadCount.toString(),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
                     ],
                   ),
                 ],
               ),
+            ),
+
+            const SizedBox(width: 10),
+
+            // Right side: blue dot + camera icon
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.camera_alt_outlined,
+                  color: textColor.withOpacity(0.6),
+                  size: 22,
+                ),
+                if (hasUnread) ...[
+                  const SizedBox(height: 4),
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF0095F6),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ],
+              ],
             ),
           ],
         ),

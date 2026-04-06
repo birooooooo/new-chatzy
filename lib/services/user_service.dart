@@ -69,6 +69,27 @@ class UserService {
     return result.docs.map((doc) => UserModel.fromMap(doc.data())).toList();
   }
 
+  /// Stream a user's presence (isOnline + lastSeen) in real-time
+  Stream<UserModel?> watchUser(String userId) {
+    return _firestore
+        .collection(collection)
+        .doc(userId)
+        .snapshots()
+        .map((doc) => doc.exists && doc.data() != null ? UserModel.fromMap(doc.data()!) : null);
+  }
+
+  /// Update online presence status
+  Future<void> updateOnlineStatus(String userId, bool isOnline) async {
+    try {
+      await _firestore.collection(collection).doc(userId).update({
+        'isOnline': isOnline ? 1 : 0,
+        if (!isOnline) 'lastSeen': DateTime.now().toIso8601String(),
+      }).timeout(const Duration(seconds: 5));
+    } catch (e) {
+      // Non-critical — don't rethrow
+    }
+  }
+
   /// Generate search keywords for a user
   List<String> generateKeywords(String name, String? username) {
     Set<String> keywords = {};

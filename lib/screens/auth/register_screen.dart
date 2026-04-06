@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'dart:ui';
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/glass_text_field.dart';
 import '../../widgets/glass_button.dart';
@@ -28,6 +30,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _obscureConfirmPassword = true;
   bool _isLoading = false;
   bool _agreeToTerms = false;
+  File? _pickedAvatarFile;
 
   @override
   void dispose() {
@@ -38,6 +41,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickAvatar() async {
+    final picker = ImagePicker();
+    final XFile? picked = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 80,
+      maxWidth: 512,
+      maxHeight: 512,
+    );
+    if (picked != null && mounted) {
+      setState(() => _pickedAvatarFile = File(picked.path));
+    }
   }
 
   void _register() async {
@@ -61,6 +77,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
           password: _passwordController.text.trim(),
           name: _nameController.text.trim(),
           username: _usernameController.text.trim(),
+          phone: _phoneController.text.trim(),
+          avatarPath: _pickedAvatarFile?.path,
         );
 
         if (mounted) {
@@ -187,11 +205,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     // Profile Avatar Picker
                     Center(
                       child: GestureDetector(
-                        onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Photo picker opened')),
-                          );
-                        },
+                        onTap: _pickAvatar,
                         child: Stack(
                           children: [
                             GlassContainer(
@@ -206,11 +220,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
                               ),
-                              child: const Icon(
-                                Icons.person_rounded,
-                                size: 50,
-                                color: Colors.white,
-                              ),
+                              child: _pickedAvatarFile != null
+                                  ? ClipOval(
+                                      child: Image.file(
+                                        _pickedAvatarFile!,
+                                        width: 100,
+                                        height: 100,
+                                        fit: BoxFit.cover,
+                                      ),
+                                    )
+                                  : const Icon(
+                                      Icons.person_rounded,
+                                      size: 50,
+                                      color: Colors.white,
+                                    ),
                             ),
                             Positioned(
                               right: 0,

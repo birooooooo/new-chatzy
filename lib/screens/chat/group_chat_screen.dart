@@ -161,6 +161,17 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
       ),
       body: Stack(
         children: [
+          // Global Doodle Background
+          Positioned.fill(
+            child: Opacity(
+              opacity: Theme.of(context).brightness == Brightness.light ? 0.12 : 0.06,
+              child: Image.asset(
+                'assets/images/doodle_bg.jpg',
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+          
           Column(
             children: [
               // Messages List

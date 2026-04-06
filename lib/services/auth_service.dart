@@ -1,11 +1,14 @@
+import 'dart:io';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import '../models/user_model.dart';
 import 'user_service.dart';
+import 'firebase_storage_service.dart';
 
 class AuthService extends ChangeNotifier {
   FirebaseAuth? _authInstance;
   final UserService _userService = UserService();
+  final FirebaseStorageService _storageService = FirebaseStorageService();
   
   FirebaseAuth get _auth {
     try {
@@ -16,15 +19,31 @@ class AuthService extends ChangeNotifier {
     }
   }
 
-  // Stream to track auth state changes
-  Stream<UserModel?> get userStream => _auth.authStateChanges().map(_userFromFirebase);
+  // Stream to track auth state changes — fetches full profile from Firestore
+  Stream<UserModel?> get userStream => _auth.authStateChanges().asyncMap(_userFromFirebase);
 
-  // Get current user
-  UserModel? get currentUser => _userFromFirebase(_auth.currentUser);
-
-  // Helper to convert Firebase User to UserModel
-  UserModel? _userFromFirebase(User? user) {
+  // Get current user (sync fallback using Firebase Auth fields only)
+  UserModel? get currentUser {
+    final user = _auth.currentUser;
     if (user == null) return null;
+    return UserModel(
+      id: user.uid,
+      name: user.displayName ?? 'User',
+      email: user.email ?? '',
+      avatar: user.photoURL,
+    );
+  }
+
+  // Helper to convert Firebase User to full UserModel fetched from Firestore
+  Future<UserModel?> _userFromFirebase(User? user) async {
+    if (user == null) return null;
+    try {
+      final firestoreUser = await _userService.getUser(user.uid);
+      if (firestoreUser != null) return firestoreUser;
+    } catch (e) {
+      debugPrint('AuthService: Failed to fetch Firestore profile, using Auth fields: $e');
+    }
+    // Fallback to Firebase Auth fields if Firestore fetch fails
     return UserModel(
       id: user.uid,
       name: user.displayName ?? 'User',
@@ -39,6 +58,8 @@ class AuthService extends ChangeNotifier {
     required String password,
     String? name,
     String? username,
+    String? phone,
+    String? avatarPath,
   }) async {
     try {
       // check if username is taken
@@ -64,12 +85,32 @@ class AuthService extends ChangeNotifier {
 
       // Create UserModel and save to Firestore
       if (userCredential.user != null) {
+        // Upload avatar if a local file path was provided
+        String? avatarUrl = userCredential.user!.photoURL;
+        if (avatarPath != null) {
+          try {
+            final avatarFile = File(avatarPath);
+            if (avatarFile.existsSync()) {
+              avatarUrl = await _storageService.uploadUserAvatar(
+                avatarFile,
+                userCredential.user!.uid,
+              );
+              if (avatarUrl != null) {
+                await userCredential.user!.updatePhotoURL(avatarUrl);
+              }
+            }
+          } catch (e) {
+            debugPrint('AuthService: Avatar upload failed, continuing without avatar: $e');
+          }
+        }
+
         final newUser = UserModel(
           id: userCredential.user!.uid,
           name: name ?? 'User',
           email: email,
-          avatar: userCredential.user!.photoURL,
+          avatar: avatarUrl,
           username: username,
+          phone: phone,
           searchKeywords: _userService.generateKeywords(name ?? 'User', username),
         );
         try {
@@ -82,7 +123,11 @@ class AuthService extends ChangeNotifier {
         }
       }
 
-      return _userFromFirebase(userCredential.user);
+      final result = await _userFromFirebase(userCredential.user);
+      if (result != null) {
+        await _userService.updateOnlineStatus(result.id, true);
+      }
+      return result;
     } catch (e) {
       debugPrint("Sign Up error: $e");
       rethrow;
@@ -113,12 +158,12 @@ class AuthService extends ChangeNotifier {
         email: emailToUse,
         password: password,
       );
-      
-      // Sync latest data from Firestore to local if needed, 
-      // but _userFromFirebase mainly uses Auth object data. 
-      // We could fetch full profile here if we wanted custom fields in memory immediately.
-      
-      return _userFromFirebase(userCredential.user);
+
+      final result = await _userFromFirebase(userCredential.user);
+      if (result != null) {
+        await _userService.updateOnlineStatus(result.id, true);
+      }
+      return result;
     } on FirebaseAuthException catch (e) {
       debugPrint("Sign In error: ${e.message}");
       rethrow;
@@ -127,7 +172,19 @@ class AuthService extends ChangeNotifier {
 
   // Sign Out
   Future<void> signOut() async {
+    final user = _auth.currentUser;
+    if (user != null) {
+      await _userService.updateOnlineStatus(user.uid, false);
+    }
     await _auth.signOut();
+  }
+
+  // Call when app goes to background/foreground
+  Future<void> setOnlineStatus(bool isOnline) async {
+    final user = _auth.currentUser;
+    if (user != null) {
+      await _userService.updateOnlineStatus(user.uid, isOnline);
+    }
   }
 
   // Password Reset
@@ -193,7 +250,7 @@ class AuthService extends ChangeNotifier {
             email: u['email'] as String,
             username: u['username'] as String,
             searchKeywords: _userService.generateKeywords(u['name'] as String, u['username'] as String),
-            isOnline: true,
+            isOnline: false,
             avatar: u['avatar'] as String,
           );
           await _userService.saveUser(testUser);

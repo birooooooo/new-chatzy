@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:path/path.dart' as path;
 import 'package:flutter/foundation.dart';
@@ -39,5 +40,19 @@ class FirebaseStorageService {
   /// Upload a user avatar
   Future<String?> uploadUserAvatar(File file, String userId) async {
     return await uploadFile(file, 'users/$userId/avatars');
+  }
+
+  /// Upload raw bytes (for web where File paths don't exist)
+  Future<String?> uploadChatImageBytes(Uint8List bytes, String chatId, String fileName) async {
+    try {
+      final uniqueName = '${DateTime.now().millisecondsSinceEpoch}_$fileName';
+      final ref = _storage.ref().child('chats/$chatId/images/$uniqueName');
+      final uploadTask = ref.putData(bytes);
+      final snapshot = await uploadTask.whenComplete(() {});
+      return await snapshot.ref.getDownloadURL();
+    } catch (e) {
+      debugPrint('Error uploading bytes to Firebase Storage: $e');
+      return null;
+    }
   }
 }

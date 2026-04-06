@@ -142,6 +142,17 @@ class _AiChatbotScreenState extends State<AiChatbotScreen> {
       backgroundColor: Colors.transparent,
       body: Stack(
         children: [
+          // Global Doodle Background
+          Positioned.fill(
+            child: Opacity(
+              opacity: Theme.of(context).brightness == Brightness.light ? 0.12 : 0.05,
+              child: Image.asset(
+                'assets/images/doodle_bg.jpg',
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+          
           Column(
             children: [
               _buildHeader(),
