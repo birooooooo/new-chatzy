@@ -503,24 +503,15 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
               ),
               const Spacer(),
               IconButton(
-                icon: Icon(
-                  Icons.videocam_rounded, 
-                  size: 24, 
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
-                ),
+                icon: Icon(Icons.videocam_outlined, size: 22, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8)),
                 onPressed: () {},
               ),
               IconButton(
-                icon: const Icon(Icons.auto_awesome_rounded, size: 24, color: AppTheme.secondary),
-                onPressed: _showAiRecap,
-                tooltip: 'AI Recap',
+                icon: Icon(Icons.call_outlined, size: 22, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8)),
+                onPressed: () {},
               ),
               IconButton(
-                icon: Icon(
-                  Icons.settings, 
-                  size: 24, 
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
-                ),
+                icon: Icon(Icons.more_vert_rounded, size: 22, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8)),
                 onPressed: () => _showStyleSettings(context),
               ),
             ],
@@ -740,7 +731,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                     focusNode: _focusNode,
                     style: const TextStyle(fontSize: 13),
                     decoration: InputDecoration(
-                      hintText: 'iMessage...',
+                      hintText: 'Type here',
                       hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4), fontSize: 13),
                       border: InputBorder.none,
                       contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -1120,8 +1111,8 @@ class _GlassMessageBubble extends StatelessWidget {
                   child: Container(
                     decoration: BoxDecoration(
                       color: isMe
-                          ? const Color(0xFF6C63FF)
-                          : const Color(0xFF2A3347),
+                          ? const Color(0xFF1F2C34)
+                          : const Color(0xFF202C33),
                       borderRadius: BorderRadius.only(
                         topLeft: Radius.circular(isMe ? 22 : (isGroupedWithAbove ? 6 : 22)),
                         topRight: Radius.circular(isMe ? (isGroupedWithAbove ? 6 : 22) : 22),

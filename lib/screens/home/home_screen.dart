@@ -5,7 +5,6 @@ import 'package:provider/provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/glass_container.dart';
-import '../../widgets/glass_text_field.dart';
 import '../chat/ai_chatbot_screen.dart';
 import 'stories_feed_screen.dart';
 import 'settings_screen.dart';
@@ -25,28 +24,58 @@ class _HomeScreenState extends State<HomeScreen> {
   final List<Widget> _screens = [
     const ChatsListScreen(),
     const ContactsScreen(),
-    const AiChatbotScreen(),
     const StoriesFeedScreen(),
     const SettingsScreen(),
   ];
 
   static const _navItems = [
-    (Icons.home_outlined, 'Home'),
-    (Icons.contact_page_outlined, 'Contacts'),
-    (Icons.psychology_outlined, 'AI'),
-    (Icons.auto_stories_outlined, 'Stories'),
-    (Icons.person_outline, 'Profile'),
+    (Icons.chat_bubble_outline_rounded, 'Chats'),
+    (Icons.call_outlined, 'Calls'),
+    (Icons.notifications_none_rounded, 'Updates'),
+    (Icons.settings_outlined, 'Settings'),
   ];
 
   @override
   Widget build(BuildContext context) {
+    final bottomPad = MediaQuery.of(context).padding.bottom;
+    final topPad = MediaQuery.of(context).padding.top;
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _screens,
+      body: Stack(
+        children: [
+          // Screens
+          IndexedStack(
+            index: _currentIndex,
+            children: _screens,
+          ),
+
+          // Bottom fade behind nav bar (gradient only — no BackdropFilter)
+          Positioned(
+            bottom: 0, left: 0, right: 0,
+            height: bottomPad + 74,
+            child: IgnorePointer(
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.bottomCenter,
+                    end: Alignment.topCenter,
+                    colors: [
+                      Colors.black.withOpacity(0.55),
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          // Nav bar floating on top
+          Positioned(
+            bottom: 0, left: 0, right: 0,
+            child: _buildNavBar(),
+          ),
+        ],
       ),
-      bottomNavigationBar: _buildNavBar(),
     );
   }
 
@@ -55,59 +84,119 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Padding(
       padding: EdgeInsets.only(
-        left: 8,
-        right: 8,
-        bottom: bottomPadding + 16,
+        left: 12,
+        right: 12,
+        bottom: bottomPadding + 14,
       ),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final totalWidth = constraints.maxWidth;
-          final itemWidth = totalWidth / _navItems.length;
-          final pillLeft = _currentIndex * itemWidth + itemWidth * 0.06;
-          final pillWidth = itemWidth * 0.88;
+      child: Row(
+        children: [
+          // Floating pill nav
+          Expanded(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final itemCount = _navItems.length;
+                final itemWidth = constraints.maxWidth / itemCount;
+                // Clamp index for the pill (only 4 items now)
+                final pillIdx = _currentIndex.clamp(0, itemCount - 1);
+                final pillLeft = pillIdx * itemWidth + itemWidth * 0.06;
+                final pillWidth = itemWidth * 0.88;
 
-          return ClipRRect(
-            borderRadius: BorderRadius.circular(36),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-              child: Container(
-                height: 62,
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.08),
+                return ClipRRect(
                   borderRadius: BorderRadius.circular(36),
-                  border: Border.all(
-                    color: Colors.white.withOpacity(0.15),
-                    width: 0.8,
-                  ),
-                ),
-                child: Stack(
-                  children: [
-                    // Selected pill
-                    AnimatedPositioned(
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeInOut,
-                      left: pillLeft,
-                      top: 6,
-                      width: pillWidth,
-                      height: 50,
-                      child: _GlassPill(),
-                    ),
-
-                    // Icons & labels
-                    Positioned.fill(
-                      child: Row(
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+                    child: Container(
+                      height: 60,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Colors.white.withOpacity(0.12),
+                            Colors.white.withOpacity(0.05),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(36),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.18),
+                          width: 1,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.3),
+                            blurRadius: 20,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
+                      ),
+                      child: Stack(
                         children: [
-                          for (int i = 0; i < _navItems.length; i++)
-                            Expanded(child: _buildNavItem(i)),
+                          // Selected pill
+                          AnimatedPositioned(
+                            duration: const Duration(milliseconds: 300),
+                            curve: Curves.easeInOut,
+                            left: pillLeft,
+                            top: 6,
+                            width: pillWidth,
+                            height: 48,
+                            child: _GlassPill(),
+                          ),
+                          // Icons & labels
+                          Positioned.fill(
+                            child: Row(
+                              children: [
+                                for (int i = 0; i < _navItems.length; i++)
+                                  Expanded(child: _buildNavItem(i)),
+                              ],
+                            ),
+                          ),
                         ],
                       ),
                     ),
-                  ],
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(width: 10),
+          // FAB (+)
+          GestureDetector(
+            onTap: () {},
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(30),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                child: Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Colors.white.withOpacity(0.18),
+                        Colors.white.withOpacity(0.06),
+                      ],
+                    ),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.2),
+                      width: 1,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.3),
+                        blurRadius: 16,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(Icons.add_rounded, color: Colors.white, size: 26),
                 ),
               ),
             ),
-          );
-        },
+          ),
+        ],
       ),
     );
   }
@@ -126,17 +215,36 @@ class _HomeScreenState extends State<HomeScreen> {
             scale: isSelected ? 1.12 : 1.0,
             duration: const Duration(milliseconds: 220),
             curve: Curves.easeOut,
-            child: Icon(
-              icon,
-              color: isSelected ? Colors.white : Colors.white.withOpacity(0.55),
-              size: 22,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Icon(
+                  icon,
+                  color: isSelected ? Colors.white : Colors.white.withOpacity(0.5),
+                  size: 22,
+                ),
+                // Notification dot for Chats
+                if (index == 0)
+                  Positioned(
+                    top: -2,
+                    right: -3,
+                    child: Container(
+                      width: 7,
+                      height: 7,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFFF3B30),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
           const SizedBox(height: 3),
           AnimatedDefaultTextStyle(
             duration: const Duration(milliseconds: 220),
             style: TextStyle(
-              color: isSelected ? Colors.white : Colors.white.withOpacity(0.55),
+              color: isSelected ? Colors.white : Colors.white.withOpacity(0.5),
               fontSize: 10,
               fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
             ),
@@ -164,13 +272,13 @@ class _GlassPill extends StatelessWidget {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    Colors.white.withOpacity(0.18),
-                    Colors.white.withOpacity(0.06),
+                    Colors.white.withOpacity(0.22),
+                    Colors.white.withOpacity(0.07),
                   ],
                 ),
                 border: Border.all(
-                  color: Colors.white.withOpacity(0.2),
-                  width: 0.8,
+                  color: Colors.white.withOpacity(0.25),
+                  width: 1,
                 ),
               ),
             ),
@@ -179,7 +287,7 @@ class _GlassPill extends StatelessWidget {
               top: -6,
               left: 14,
               right: 14,
-              height: 28,
+              height: 26,
               child: Container(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(16),
@@ -187,7 +295,7 @@ class _GlassPill extends StatelessWidget {
                     center: Alignment.topCenter,
                     radius: 0.85,
                     colors: [
-                      Colors.white.withOpacity(0.65),
+                      Colors.white.withOpacity(0.7),
                       Colors.white.withOpacity(0.2),
                       Colors.transparent,
                     ],

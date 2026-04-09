@@ -31,12 +31,14 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
   bool _isSearching = false;
   bool _showStories = false;
   Timer? _storyHideTimer;
-  // Tracks the story count from the last auto-show so new stories re-trigger it.
   int _lastSeenStoryCount = 0;
-  
+  String _activeFilter = 'All';
+  final List<String> _filters = ['All', 'Favorites', 'Work', 'Groups', 'Communities'];
+
   // Focused interaction state
   ChatModel? _selectedChat;
   Offset? _selectedChatPosition;
+  double _scrollOffset = 0.0;
 
   // Duration constants
   static const Duration _storyWithContentDuration = Duration(seconds: 30);
@@ -81,7 +83,9 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
   }
 
   void _onScroll() {
-    if (_scrollController.offset < -80 && !_showStories) {
+    final offset = _scrollController.offset;
+    if (mounted) setState(() => _scrollOffset = offset);
+    if (offset < -80 && !_showStories) {
       final storyProvider = Provider.of<StoryProvider>(context, listen: false);
       final hasStories = storyProvider.latestPerUser.isNotEmpty;
       _showStoriesWith(hasContent: hasStories);
@@ -91,10 +95,10 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
   String _relativeTime(DateTime t) {
     final diff = DateTime.now().difference(t);
     if (diff.inSeconds < 60) return 'just now';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    if (diff.inMinutes < 60) return '${diff.inMinutes} mins';
+    if (diff.inHours < 24) return '${diff.inHours}h';
     if (diff.inDays == 1) return 'yesterday';
-    return '${diff.inDays}d ago';
+    return '${diff.inDays}d';
   }
 
   List<ChatModel> _getFilteredChats(List<ChatModel> allChats) {
@@ -134,154 +138,103 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
   Widget build(BuildContext context) {
     return Consumer<ChatProvider>(
       builder: (context, chatProvider, child) {
+        final topPad = MediaQuery.of(context).padding.top;
+
         return Scaffold(
           backgroundColor: Colors.transparent,
-          body: Stack(
+          body: Column(
             children: [
-              GestureDetector(
-                onTap: () {
-                  if (_isSearching) {
-                    setState(() {
-                      _isSearching = false;
-                      _searchController.clear();
-                    });
-                    FocusScope.of(context).unfocus();
-                  }
-                },
-                child: CustomScrollView(
-                  controller: _scrollController,
-                  physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
-                  slivers: [
-                    // Custom App Bar
-                    SliverAppBar(
-                      floating: true,
-                      pinned: true,
-                      backgroundColor: Colors.transparent,
-                      elevation: 0,
-                      expandedHeight: _isSearching ? 130 : 70,
-                      toolbarHeight: 60,
-                      flexibleSpace: FlexibleSpaceBar(
-                        background: Padding(
-                          padding: EdgeInsets.only(
-                            top: MediaQuery.of(context).padding.top + 4,
-                            left: 20,
-                            right: 20,
+              // ── Fixed header (never scrolls) ──
+              Container(
+                padding: EdgeInsets.only(
+                  top: topPad + 10,
+                  left: 16, right: 16, bottom: 10,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        const Text('Chitzy', style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold)),
+                        const Spacer(),
+                        _HeaderIcon(icon: Icons.search_rounded, onTap: () => setState(() {
+                          _isSearching = !_isSearching;
+                          if (!_isSearching) _searchController.clear();
+                        })),
+                        const SizedBox(width: 8),
+                        _HeaderIcon(icon: Icons.camera_alt_outlined, onTap: () {}),
+                        const SizedBox(width: 8),
+                        _HeaderIcon(icon: Icons.more_vert_rounded, onTap: () {}),
+                      ],
+                    ),
+                    if (_isSearching) ...[
+                      const SizedBox(height: 10),
+                      Container(
+                        height: 40,
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        decoration: BoxDecoration(color: Colors.white.withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
+                        child: TextField(
+                          controller: _searchController,
+                          autofocus: true,
+                          style: const TextStyle(color: Colors.white, fontSize: 14),
+                          onChanged: (_) => setState(() {}),
+                          decoration: InputDecoration(
+                            hintText: 'Search...',
+                            hintStyle: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 14),
+                            border: InputBorder.none,
+                            prefixIcon: Icon(Icons.search, color: Colors.white.withOpacity(0.5), size: 18),
+                            isDense: true,
                           ),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    'CHATZY',
-                                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                      letterSpacing: 1.0,
-                                    ),
-                                  ),
-                                  // Animated Search Button
-                                  GestureDetector(
-                                    onTap: () {
-                                      setState(() {
-                                        _isSearching = !_isSearching;
-                                        if (!_isSearching) _searchController.clear();
-                                      });
-                                    },
-                                    child: AnimatedContainer(
-                                      duration: const Duration(milliseconds: 400),
-                                      curve: Curves.easeInOutCubic,
-                                      padding: EdgeInsets.symmetric(
-                                        horizontal: _isSearching ? 14 : 10,
-                                        vertical: 8,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: _isSearching 
-                                          ? (Theme.of(context).brightness == Brightness.light 
-                                              ? Colors.black.withOpacity(0.08) 
-                                              : Colors.white.withOpacity(0.12))
-                                          : Colors.transparent,
-                                        borderRadius: BorderRadius.circular(20),
-                                      ),
-                                      child: Icon(
-                                        _isSearching ? Icons.close : Icons.search_rounded,
-                                        size: 24,
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                        ),
+                      ).animate().fadeIn(duration: 200.ms),
+                    ],
+                    const SizedBox(height: 12),
+                    if (_showStories) _buildStoriesTray(),
+                    const SizedBox(height: 10),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: _filters.map((f) {
+                          final isActive = _activeFilter == f;
+                          return GestureDetector(
+                            onTap: () => setState(() => _activeFilter = f),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              margin: const EdgeInsets.only(right: 8),
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+                              decoration: BoxDecoration(
+                                color: isActive ? Colors.white : Colors.white.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(20),
                               ),
-                              if (_isSearching)
-                                Container(
-                                  margin: const EdgeInsets.only(top: 15),
-                                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                                  height: 50,
-                                  decoration: BoxDecoration(
-                                    color: Theme.of(context).colorScheme.surface.withOpacity(
-                                      Theme.of(context).brightness == Brightness.light ? 1.0 : 0.15,
-                                    ),
-                                    borderRadius: BorderRadius.circular(15),
-                                    border: Border.all(
-                                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.1),
-                                    ),
-                                  ),
-                                  child: TextField(
-                                    controller: _searchController,
-                                    autofocus: true,
-                                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
-                                    onChanged: (_) => setState(() {}),
-                                    decoration: InputDecoration(
-                                      hintText: 'Search chats...',
-                                      hintStyle: TextStyle(
-                                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
-                                        fontSize: 15,
-                                      ),
-                                      border: InputBorder.none,
-                                      icon: Icon(
-                                        Icons.search, 
-                                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
-                                        size: 20,
-                                      ),
-                                    ),
-                                  ),
-                                ).animate().fadeIn(duration: 200.ms).slideY(begin: -0.1, end: 0),
-                            ],
-                          ),
-                        ),
+                              child: Text(f, style: TextStyle(
+                                color: isActive ? Colors.black : Colors.white.withOpacity(0.7),
+                                fontSize: 13,
+                                fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
+                              )),
+                            ),
+                          );
+                        }).toList(),
                       ),
                     ),
+                  ],
+                ),
+              ),
 
-                    // Stories Tray
-                    SliverToBoxAdapter(
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 400),
-                        curve: Curves.easeInOutCubic,
-                        height: _showStories ? 110 : 0,
-                        child: ClipRect(
-                          child: Opacity(
-                            opacity: _showStories ? 1.0 : 0.0,
-                            child: _buildStoriesTray(),
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    // Chats List Header
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
-                        child: Text(
-                          'Recent Messages',
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                      ),
-                    ),
+              // ── Scrollable chat list (clipped below header) ──
+              Expanded(
+                child: GestureDetector(
+                  onTap: () {
+                    if (_isSearching) {
+                      setState(() { _isSearching = false; _searchController.clear(); });
+                      FocusScope.of(context).unfocus();
+                    }
+                  },
+                  child: ClipRect(
+                    child: CustomScrollView(
+                        controller: _scrollController,
+                        physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+                        slivers: [
 
                     // Chats List
                     Builder(
@@ -333,94 +286,111 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                           );
                         }
 
-                        return SliverPadding(
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
-                          sliver: SliverList(
-                            delegate: SliverChildBuilderDelegate(
-                              (context, index) {
-                                final chat = filteredChats[index];
-                                final lastMsg = chat.lastMessage;
-                                final currentUserId = chatProvider.currentUserId ?? '';
-                                final displayName = chat.getDisplayName(currentUserId);
-                                final displayAvatar = chat.getDisplayAvatar(currentUserId);
-                                
-                                final timeStr = lastMsg != null
-                                    ? _relativeTime(lastMsg.timestamp)
-                                    : '';
+                        // Build all items inside one connected glass bubble
+                        final currentUserId = chatProvider.currentUserId ?? '';
+                        final items = <Widget>[];
+                        for (int i = 0; i < filteredChats.length; i++) {
+                          final chat = filteredChats[i];
+                          final lastMsg = chat.lastMessage;
+                          final displayName = chat.getDisplayName(currentUserId);
+                          final displayAvatar = chat.getDisplayAvatar(currentUserId);
+                          final timeStr = lastMsg != null ? _relativeTime(lastMsg.timestamp) : '';
 
-                                // Use live presence from provider, fall back to stale participant data
-                                final otherParticipant = (chat.type == ChatType.private && chat.participants.isNotEmpty)
-                                    ? chat.participants.firstWhere(
-                                        (p) => p.id != currentUserId,
-                                        orElse: () => chat.participants.first,
-                                      )
-                                    : null;
-                                final liveOther = otherParticipant != null
-                                    ? (chatProvider.getLiveUser(otherParticipant.id) ?? otherParticipant)
-                                    : null;
-                                final isOnline = liveOther?.isOnline ?? false;
-                                final lastSeen = liveOther?.lastSeen;
+                          final otherParticipant = (chat.type == ChatType.private && chat.participants.isNotEmpty)
+                              ? chat.participants.firstWhere(
+                                  (p) => p.id != currentUserId,
+                                  orElse: () => chat.participants.first,
+                                )
+                              : null;
+                          final liveOther = otherParticipant != null
+                              ? (chatProvider.getLiveUser(otherParticipant.id) ?? otherParticipant)
+                              : null;
+                          final isOnline = liveOther?.isOnline ?? false;
 
-                                return Builder(
-                                  builder: (itemContext) {
-                                    return _ChatItem(
-                                      name: displayName,
-                                      message: lastMsg?.content ?? 'No messages yet',
-                                      time: timeStr,
-                                      unreadCount: chat.getUnreadCount(currentUserId),
-                                      isOnline: isOnline,
-                                      isGroup: chat.type == ChatType.group,
-                                      isPinned: chat.isPinned,
-                                      imageUrl: displayAvatar,
-                                      onTap: () {
-                                        if (chat.type == ChatType.group) {
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (context) => GroupChatScreen(chatId: chat.id, groupName: displayName),
-                                            ),
-                                          );
-                                        } else {
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (context) => ChatScreen(
-                                                chatId: chat.id,
-                                                chatName: displayName,
-                                                isOnline: isOnline,
-                                                imageUrl: displayAvatar,
-                                              ),
-                                            ),
-                                          );
-                                        }
-                                      },
-                                      onLongPress: () {
-                                        final RenderBox box = itemContext.findRenderObject() as RenderBox;
-                                        final position = box.localToGlobal(Offset.zero);
-                                        setState(() {
-                                          _selectedChat = chat;
-                                          _selectedChatPosition = position;
-                                        });
-                                      },
-                                    );
+                          items.add(
+                            Builder(
+                              builder: (itemContext) => _ChatItem(
+                                name: displayName,
+                                message: lastMsg?.content ?? 'No messages yet',
+                                time: timeStr,
+                                unreadCount: chat.getUnreadCount(currentUserId),
+                                isOnline: isOnline,
+                                isGroup: chat.type == ChatType.group,
+                                isPinned: chat.isPinned,
+                                imageUrl: displayAvatar,
+                                onTap: () {
+                                  if (chat.type == ChatType.group) {
+                                    Navigator.push(context, MaterialPageRoute(
+                                      builder: (_) => GroupChatScreen(chatId: chat.id, groupName: displayName),
+                                    ));
+                                  } else {
+                                    Navigator.push(context, MaterialPageRoute(
+                                      builder: (_) => ChatScreen(
+                                        chatId: chat.id,
+                                        chatName: displayName,
+                                        isOnline: isOnline,
+                                        imageUrl: displayAvatar,
+                                      ),
+                                    ));
                                   }
-                                ).animate()
-                                  .fadeIn(delay: Duration(milliseconds: 100 * index), duration: 400.ms)
-                                  .slideY(begin: 0.1, end: 0, curve: Curves.easeOutQuart);
-                              },
-                              childCount: filteredChats.length,
+                                },
+                                onLongPress: () {
+                                  final RenderBox box = itemContext.findRenderObject() as RenderBox;
+                                  final position = box.localToGlobal(Offset.zero);
+                                  setState(() {
+                                    _selectedChat = chat;
+                                    _selectedChatPosition = position;
+                                  });
+                                },
+                              ),
                             ),
-                          ),
+                          );
+
+                          // Divider between items, not after last
+                          if (i < filteredChats.length - 1) {
+                            items.add(
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 14),
+                                child: Container(
+                                  height: 0.5,
+                                  color: Colors.white.withOpacity(0.08),
+                                ),
+                              ),
+                            );
+                          }
+                        }
+
+                        return SliverToBoxAdapter(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    Colors.white.withOpacity(0.10),
+                                    Colors.white.withOpacity(0.03),
+                                  ],
+                                ),
+                                borderRadius: BorderRadius.circular(24),
+                              ),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: items,
+                              ),
+                            ),
+                          ).animate()
+                            .fadeIn(duration: 400.ms)
+                            .slideY(begin: 0.06, end: 0, curve: Curves.easeOutQuart),
                         );
                       },
                     ),
                   ],
                 ),
               ),
-              
-              // Immersive Focused Overlay
-              if (_selectedChat != null)
-                _buildFocusedOverlay(chatProvider),
+            ),
+          ),
             ],
           ),
         );
@@ -452,17 +422,37 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                     children: [
                       Transform.scale(
                         scale: 1.05,
-                        child: _ChatItem(
-                          name: _selectedChat!.getDisplayName(provider.currentUserId ?? ''),
-                          message: _selectedChat!.lastMessage?.content ?? 'No messages yet',
-                          time: '',
-                          unreadCount: _selectedChat!.getUnreadCount(provider.currentUserId),
-                          isOnline: _selectedChat!.participants.any((p) => p.id != provider.currentUserId && p.isOnline),
-                          isGroup: _selectedChat!.type == ChatType.group,
-                          isPinned: _selectedChat!.isPinned,
-                          imageUrl: _selectedChat!.getDisplayAvatar(provider.currentUserId ?? ''),
-                          onTap: () {},
-                          onLongPress: () {},
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(24),
+                          child: BackdropFilter(
+                            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    Colors.white.withOpacity(0.14),
+                                    Colors.white.withOpacity(0.04),
+                                  ],
+                                ),
+                                borderRadius: BorderRadius.circular(24),
+                                border: Border.all(color: Colors.white.withOpacity(0.18), width: 1),
+                              ),
+                              child: _ChatItem(
+                                name: _selectedChat!.getDisplayName(provider.currentUserId ?? ''),
+                                message: _selectedChat!.lastMessage?.content ?? 'No messages yet',
+                                time: '',
+                                unreadCount: _selectedChat!.getUnreadCount(provider.currentUserId),
+                                isOnline: _selectedChat!.participants.any((p) => p.id != provider.currentUserId && p.isOnline),
+                                isGroup: _selectedChat!.type == ChatType.group,
+                                isPinned: _selectedChat!.isPinned,
+                                imageUrl: _selectedChat!.getDisplayAvatar(provider.currentUserId ?? ''),
+                                onTap: () {},
+                                onLongPress: () {},
+                              ),
+                            ),
+                          ),
                         ),
                       ).animate()
                         .scale(duration: 400.ms, curve: Curves.easeOutBack, begin: const Offset(0.95, 0.95))
@@ -541,16 +531,14 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
   }
 
   Widget _buildStoriesTray() {
-    return Container(
-      height: 110,
-      margin: const EdgeInsets.only(top: 10),
+    return SizedBox(
+      height: 100,
       child: Consumer<StoryProvider>(
         builder: (context, storyProvider, _) {
           final storyUsers = storyProvider.latestPerUser;
-
           return ListView.builder(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 20),
+            padding: EdgeInsets.zero,
             itemCount: storyUsers.length + 1,
             itemBuilder: (context, index) {
               if (index == 0) return _buildAddStory();
@@ -567,123 +555,114 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
     return GestureDetector(
       onTap: () {},
       child: Container(
-        margin: const EdgeInsets.only(right: 16),
+        margin: const EdgeInsets.only(right: 10),
         child: Column(
           children: [
-            Stack(
-              children: [
-                Container(
+            ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                child: Container(
                   width: 68,
                   height: 68,
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.05),
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: Colors.white.withOpacity(0.12),
-                      width: 1.5,
-                    ),
+                    color: Colors.white.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
                   ),
-                  child: const Icon(
-                    Icons.add_rounded,
-                    color: Colors.white70,
-                    size: 30,
-                  ),
-                ),
-                Positioned(
-                  right: 0,
-                  bottom: 0,
-                  child: Container(
-                    padding: const EdgeInsets.all(2),
-                    decoration: const BoxDecoration(
-                      color: Colors.transparent,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Container(
-                      width: 22,
-                      height: 22,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.add, color: Colors.white, size: 14),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Your Story',
-              style: TextStyle(color: Colors.white38, fontSize: 11),
-            ),
-          ],
-        ),
-      ),
-    ).animate().scale(duration: 400.ms, curve: Curves.easeOutBack);
-  }
-
-  Widget _buildStoryItem(StoryModel story, StoryProvider storyProvider) {
-    final isViewed = storyProvider.isViewed(story.id, 'me');
-    
-    return GestureDetector(
-      onTap: () {
-        storyProvider.markViewed(story.id, 'me');
-      },
-      child: Container(
-        margin: const EdgeInsets.only(right: 16),
-        child: Column(
-          children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              padding: const EdgeInsets.all(2.5),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: isViewed
-                    ? null
-                    : const LinearGradient(
-                        colors: [
-                          Color(0xFFFF6B6B),
-                          Color(0xFFFFE66D),
-                          Color(0xFF4ECDC4),
-                        ],
-                      ),
-                color: isViewed ? Colors.white24 : null,
-              ),
-              child: Container(
-                padding: const EdgeInsets.all(2.5),
-                decoration: const BoxDecoration(
-                  color: Colors.transparent,
-                  shape: BoxShape.circle,
-                ),
-                child: AppAvatar(
-                  name: story.userName,
-                  size: 58,
-                  imageUrl: story.userAvatar,
-                  isCircle: true,
+                  child: const Icon(Icons.add_rounded, color: Colors.white70, size: 28),
                 ),
               ),
             ),
             const SizedBox(height: 6),
+            const Text('You', style: TextStyle(color: Colors.white54, fontSize: 11)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStoryItem(StoryModel story, StoryProvider storyProvider) {
+    final isViewed = storyProvider.isViewed(story.id, 'me');
+    return GestureDetector(
+      onTap: () => storyProvider.markViewed(story.id, 'me'),
+      child: Container(
+        margin: const EdgeInsets.only(right: 10),
+        child: Column(
+          children: [
+            Stack(
+              children: [
+                // Square story thumbnail with orange glow border
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  width: 68,
+                  height: 68,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: isViewed
+                          ? Colors.white24
+                          : const Color(0xFFFF8C00),
+                      width: isViewed ? 1.5 : 2.5,
+                    ),
+                    boxShadow: isViewed
+                        ? []
+                        : [
+                            BoxShadow(
+                              color: const Color(0xFFFF8C00).withOpacity(0.4),
+                              blurRadius: 8,
+                              spreadRadius: 1,
+                            )
+                          ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: story.userAvatar != null
+                        ? Image.network(story.userAvatar!, fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Container(
+                              color: Colors.white.withOpacity(0.1),
+                              child: const Icon(Icons.person, color: Colors.white54),
+                            ))
+                        : Container(
+                            color: Colors.white.withOpacity(0.1),
+                            child: const Icon(Icons.person, color: Colors.white54),
+                          ),
+                  ),
+                ),
+                // Count badge
+                Positioned(
+                  top: 4,
+                  right: 4,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFF8C00),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Text('3', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
             SizedBox(
-              width: 70,
+              width: 68,
               child: Text(
                 story.userName.split(' ')[0],
                 textAlign: TextAlign.center,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  color: isViewed
-                      ? Colors.white38
-                      : Colors.white.withOpacity(0.9),
+                  color: isViewed ? Colors.white38 : Colors.white.withOpacity(0.9),
                   fontSize: 11,
-                  fontWeight: isViewed ? FontWeight.normal : FontWeight.w600,
+                  fontWeight: isViewed ? FontWeight.normal : FontWeight.w500,
                 ),
               ),
             ),
           ],
         ),
       ),
-    ).animate().scale(duration: 400.ms, curve: Curves.easeOutBack);
+    ).animate().fadeIn(duration: 300.ms);
   }
 }
 
@@ -716,90 +695,191 @@ class _ChatItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool hasUnread = unreadCount > 0;
-    final Color textColor = Theme.of(context).colorScheme.onSurface;
 
     return GestureDetector(
       onTap: onTap,
       onLongPress: onLongPress,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-        child: Row(
-          children: [
-            // Avatar
-            AppAvatar(
-              name: name,
-              size: 52,
-              imageUrl: isGroup ? null : imageUrl,
-              isOnline: isOnline && !isGroup,
-              icon: isGroup ? Icons.group_rounded : null,
-            ),
-            const SizedBox(width: 12),
-
-            // Name + message
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    name,
-                    style: TextStyle(
-                      color: textColor,
-                      fontSize: 15,
-                      fontWeight: hasUnread ? FontWeight.bold : FontWeight.w500,
+      behavior: HitTestBehavior.opaque,
+      child: Stack(
+        children: [
+          // Row content
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 18),
+            child: Row(
+              children: [
+                // Avatar with orange online dot
+                Stack(
+                  children: [
+                    AppAvatar(
+                      name: name,
+                      size: 52,
+                      imageUrl: isGroup ? null : imageUrl,
+                      isOnline: false,
+                      icon: isGroup ? Icons.group_rounded : null,
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          time.isNotEmpty ? '$message · $time' : message,
-                          style: TextStyle(
-                            color: hasUnread
-                                ? textColor.withOpacity(0.9)
-                                : textColor.withOpacity(0.4),
-                            fontSize: 13,
-                            fontWeight: hasUnread ? FontWeight.w600 : FontWeight.normal,
+                    if (isOnline && !isGroup)
+                      Positioned(
+                        right: 1,
+                        bottom: 1,
+                        child: Container(
+                          width: 13,
+                          height: 13,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFF8C00),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.black, width: 2),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFFFF8C00).withOpacity(0.5),
+                                blurRadius: 4,
+                              ),
+                            ],
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                         ),
+                      ),
+                  ],
+                ),
+                const SizedBox(width: 13),
+
+                // Name + message
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        name,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: hasUnread ? FontWeight.bold : FontWeight.w500,
+                          letterSpacing: 0.1,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          if (!hasUnread) ...[
+                            Icon(Icons.done_all, size: 14, color: Colors.blue.shade300),
+                            const SizedBox(width: 4),
+                          ],
+                          Expanded(
+                            child: Text(
+                              message,
+                              style: TextStyle(
+                                color: hasUnread
+                                    ? Colors.white.withOpacity(0.9)
+                                    : Colors.white.withOpacity(0.38),
+                                fontSize: 13,
+                                fontWeight: hasUnread ? FontWeight.w500 : FontWeight.normal,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
-              ),
-            ),
-
-            const SizedBox(width: 10),
-
-            // Right side: blue dot + camera icon
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.camera_alt_outlined,
-                  color: textColor.withOpacity(0.6),
-                  size: 22,
                 ),
-                if (hasUnread) ...[
-                  const SizedBox(height: 4),
-                  Container(
-                    width: 8,
-                    height: 8,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF0095F6),
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                ],
+
+                const SizedBox(width: 10),
+
+                // Right: time + badge
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    if (time.isNotEmpty)
+                      Text(
+                        time,
+                        style: TextStyle(
+                          color: hasUnread
+                              ? const Color(0xFFFF8C00)
+                              : Colors.white.withOpacity(0.30),
+                          fontSize: 11,
+                          fontWeight: hasUnread ? FontWeight.w600 : FontWeight.normal,
+                        ),
+                      ),
+                    if (hasUnread) ...[
+                      const SizedBox(height: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFF3B30),
+                          borderRadius: BorderRadius.circular(10),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFFFF3B30).withOpacity(0.4),
+                              blurRadius: 6,
+                            ),
+                          ],
+                        ),
+                        child: Text(
+                          unreadCount > 99 ? '99+' : unreadCount.toString(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ] else if (isPinned) ...[
+                      const SizedBox(height: 6),
+                      Icon(Icons.push_pin_rounded, size: 13, color: Colors.white.withOpacity(0.25)),
+                    ],
+                  ],
+                ),
               ],
             ),
-          ],
+          ),
+
+          // Orange left accent bar for unread
+          if (hasUnread)
+            Positioned(
+              left: 0,
+              top: 10,
+              bottom: 10,
+              width: 3,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFF8C00),
+                  borderRadius: BorderRadius.circular(2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFFF8C00).withOpacity(0.6),
+                      blurRadius: 6,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+
+class _HeaderIcon extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  const _HeaderIcon({required this.icon, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.1),
+          shape: BoxShape.circle,
         ),
+        child: Icon(icon, color: Colors.white, size: 18),
       ),
     );
   }
