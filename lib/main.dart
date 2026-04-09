@@ -75,22 +75,22 @@ class ChatzyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<ThemeProvider>(
       builder: (context, themeProvider, _) {
-        final isLight = themeProvider.isLightTheme;
+        final isLight = themeProvider.isLightTheme; // kept for compatibility
         return MaterialApp(
           title: 'CHATZY',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
-          themeMode: isLight ? ThemeMode.light : ThemeMode.dark,
+          themeMode: themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
           builder: (context, child) {
             ScreenSize.init(context);
-            final isNebula = themeProvider.backgroundStyle == BackgroundStyle.nebula;
+            final isNebula = themeProvider.isDarkMode &&
+                themeProvider.backgroundStyle == BackgroundStyle.nebula;
             return Container(
               decoration: themeProvider.backgroundDecoration,
               child: isNebula
                   ? Stack(
                       children: [
-                        // Blur overlay only for nebula
                         Positioned.fill(
                           child: BackdropFilter(
                             filter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),

@@ -52,7 +52,7 @@ class _HomeScreenState extends State<HomeScreen> {
           // Bottom fade behind nav bar (gradient only — no BackdropFilter)
           Positioned(
             bottom: 0, left: 0, right: 0,
-            height: bottomPad + 74,
+            height: bottomPad + 62,
             child: IgnorePointer(
               child: Container(
                 decoration: BoxDecoration(
@@ -84,8 +84,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Padding(
       padding: EdgeInsets.only(
-        left: 12,
-        right: 12,
+        left: 40,
+        right: 40,
         bottom: bottomPadding + 14,
       ),
       child: Row(
@@ -106,7 +106,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: BackdropFilter(
                     filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
                     child: Container(
-                      height: 60,
+                      height: 56,
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           begin: Alignment.topLeft,
@@ -136,9 +136,9 @@ class _HomeScreenState extends State<HomeScreen> {
                             duration: const Duration(milliseconds: 300),
                             curve: Curves.easeInOut,
                             left: pillLeft,
-                            top: 6,
+                            top: 5,
                             width: pillWidth,
-                            height: 48,
+                            height: 46,
                             child: _GlassPill(),
                           ),
                           // Icons & labels
@@ -158,44 +158,6 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             ),
           ),
-          const SizedBox(width: 10),
-          // FAB (+)
-          GestureDetector(
-            onTap: () {},
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(30),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                child: Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Colors.white.withOpacity(0.18),
-                        Colors.white.withOpacity(0.06),
-                      ],
-                    ),
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: Colors.white.withOpacity(0.2),
-                      width: 1,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.3),
-                        blurRadius: 16,
-                        offset: const Offset(0, 6),
-                      ),
-                    ],
-                  ),
-                  child: const Icon(Icons.add_rounded, color: Colors.white, size: 26),
-                ),
-              ),
-            ),
-          ),
         ],
       ),
     );
@@ -204,6 +166,8 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildNavItem(int index) {
     final isSelected = _currentIndex == index;
     final (icon, label) = _navItems[index];
+    const activeColor = Colors.white;
+    final inactiveColor = Colors.white.withOpacity(0.45);
 
     return GestureDetector(
       onTap: () => setState(() => _currentIndex = index),
@@ -220,10 +184,9 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 Icon(
                   icon,
-                  color: isSelected ? Colors.white : Colors.white.withOpacity(0.5),
+                  color: isSelected ? activeColor : inactiveColor,
                   size: 22,
                 ),
-                // Notification dot for Chats
                 if (index == 0)
                   Positioned(
                     top: -2,
@@ -244,7 +207,7 @@ class _HomeScreenState extends State<HomeScreen> {
           AnimatedDefaultTextStyle(
             duration: const Duration(milliseconds: 220),
             style: TextStyle(
-              color: isSelected ? Colors.white : Colors.white.withOpacity(0.5),
+              color: isSelected ? activeColor : inactiveColor,
               fontSize: 10,
               fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
             ),

@@ -26,8 +26,10 @@ class SettingsScreen extends StatelessWidget {
         physics: const BouncingScrollPhysics(),
         slivers: [
           SliverAppBar(
-            floating: true,
+            pinned: true,
             backgroundColor: Colors.transparent,
+            surfaceTintColor: Colors.transparent,
+            shadowColor: Colors.transparent,
             title: Text(
               'Settings',
               style: GoogleFonts.inter(
@@ -49,8 +51,8 @@ class SettingsScreen extends StatelessWidget {
 
                 const SizedBox(height: 28),
 
-                // Background Selector
-                const _BackgroundSelector()
+                // Appearance
+                const _AppearanceSection()
                     .animate()
                     .fadeIn(delay: 60.ms, duration: 250.ms)
                     .slideY(begin: 0.1, end: 0),
@@ -234,52 +236,94 @@ class _ProfileCard extends StatelessWidget {
   }
 }
 
-class _BackgroundSelector extends StatelessWidget {
-  const _BackgroundSelector();
+class _AppearanceSection extends StatelessWidget {
+  const _AppearanceSection();
 
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
-    
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Background Style',
+          'Appearance',
           style: TextStyle(
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+            color: onSurface.withOpacity(0.5),
             fontSize: 13,
             fontWeight: FontWeight.w600,
           ),
         ),
-        const SizedBox(height: 12),
-        SizedBox(
-          height: 100,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            physics: const BouncingScrollPhysics(),
-            children: [
-              _buildOption(context, themeProvider, BackgroundStyle.nebula, 'Nebula'),
-              _buildOption(context, themeProvider, BackgroundStyle.deepBlack, 'Pure Black'),
-              _buildOption(context, themeProvider, BackgroundStyle.midnightGradient, 'Midnight'),
-              _buildOption(context, themeProvider, BackgroundStyle.oceanMist, 'Ocean'),
-              _buildOption(context, themeProvider, BackgroundStyle.cyberPurple, 'Cyber'),
-              _buildOption(context, themeProvider, BackgroundStyle.glassMesh, 'Glass Mesh'),
-              _buildOption(context, themeProvider, BackgroundStyle.pureWhite, 'Pure White'),
-            ],
+        const SizedBox(height: 10),
+
+        // Dark / Light toggle
+        GlassContainer(
+          borderRadius: BorderRadius.circular(16),
+          opacity: 0.05,
+          blur: 10,
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Theme Mode',
+                  style: TextStyle(color: onSurface, fontSize: 15, fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    _ModeButton(
+                      icon: Icons.dark_mode_rounded,
+                      label: 'Dark',
+                      isSelected: themeProvider.isDarkMode,
+                      onTap: () => themeProvider.setDarkMode(true),
+                    ),
+                    const SizedBox(width: 12),
+                    _ModeButton(
+                      icon: Icons.light_mode_rounded,
+                      label: 'Light',
+                      isSelected: !themeProvider.isDarkMode,
+                      onTap: () => themeProvider.setDarkMode(false),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
+
+        // Background (dark mode only)
+        if (themeProvider.isDarkMode) ...[
+          const SizedBox(height: 16),
+          Text(
+            'Background',
+            style: TextStyle(color: onSurface.withOpacity(0.5), fontSize: 13, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            height: 100,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              children: [
+                _buildBgOption(context, themeProvider, BackgroundStyle.nebula, 'Nebula'),
+                _buildBgOption(context, themeProvider, BackgroundStyle.deepBlack, 'Pure Black'),
+              ],
+            ),
+          ),
+        ],
       ],
     );
   }
 
-  Widget _buildOption(BuildContext context, ThemeProvider provider, BackgroundStyle style, String label) {
+  Widget _buildBgOption(BuildContext context, ThemeProvider provider, BackgroundStyle style, String label) {
     final isSelected = provider.backgroundStyle == style;
-    
     return GestureDetector(
       onTap: () => provider.setBackgroundStyle(style),
       child: Container(
-        width: 120,
+        width: 110,
         margin: const EdgeInsets.only(right: 12),
         child: Column(
           children: [
@@ -297,14 +341,12 @@ class _BackgroundSelector extends StatelessWidget {
                       color: AppTheme.secondary.withOpacity(0.3),
                       blurRadius: 10,
                       spreadRadius: 2,
-                    )
+                    ),
                   ] : [],
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(14),
-                  child: Container(
-                    decoration: _getStaticDecoration(style),
-                  ),
+                  child: Container(decoration: _bgDecoration(style)),
                 ),
               ),
             ),
@@ -312,11 +354,7 @@ class _BackgroundSelector extends StatelessWidget {
             Text(
               label,
               style: TextStyle(
-                color: isSelected
-                    ? (style == BackgroundStyle.pureWhite
-                        ? const Color(0xFF1E293B)
-                        : Colors.white)
-                    : Colors.white.withOpacity(0.5),
+                color: isSelected ? Colors.white : Colors.white.withOpacity(0.5),
                 fontSize: 11,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
               ),
@@ -327,7 +365,7 @@ class _BackgroundSelector extends StatelessWidget {
     );
   }
 
-  Decoration _getStaticDecoration(BackgroundStyle style) {
+  Decoration _bgDecoration(BackgroundStyle style) {
     switch (style) {
       case BackgroundStyle.nebula:
         return const BoxDecoration(
@@ -338,37 +376,65 @@ class _BackgroundSelector extends StatelessWidget {
         );
       case BackgroundStyle.deepBlack:
         return const BoxDecoration(color: Color(0xFF000000));
-      case BackgroundStyle.midnightGradient:
-        return const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF0F172A), Color(0xFF1E1B4B)],
-          ),
-        );
-      case BackgroundStyle.oceanMist:
-        return const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF064E3B), Color(0xFF0F766E)],
-          ),
-        );
-      case BackgroundStyle.cyberPurple:
-        return const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF2E1065), Color(0xFF4C1D95)],
-          ),
-        );
-      case BackgroundStyle.glassMesh:
-        return const BoxDecoration(
-          gradient: RadialGradient(
-            colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
-          ),
-        );
-      case BackgroundStyle.pureWhite:
-        return const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFFFFFFFF), Color(0xFFF0F4FF)],
-          ),
-        );
     }
+  }
+}
+
+
+class _ModeButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _ModeButton({
+    required this.icon,
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 220),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? AppTheme.secondary.withOpacity(0.15)
+                : onSurface.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isSelected ? AppTheme.secondary : onSurface.withOpacity(0.1),
+              width: isSelected ? 1.5 : 1,
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                color: isSelected ? AppTheme.secondary : onSurface.withOpacity(0.4),
+                size: 22,
+              ),
+              const SizedBox(height: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  color: isSelected ? AppTheme.secondary : onSurface.withOpacity(0.4),
+                  fontSize: 13,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 

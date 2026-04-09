@@ -140,6 +140,12 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
       builder: (context, chatProvider, child) {
         final topPad = MediaQuery.of(context).padding.top;
 
+        const fg = Colors.white;
+        final fgSubtle = Colors.white.withOpacity(0.45);
+        final chipBg = Colors.white.withOpacity(0.1);
+        final iconBg = Colors.white.withOpacity(0.1);
+        final searchBg = Colors.white.withOpacity(0.1);
+
         return Scaffold(
           backgroundColor: Colors.transparent,
           body: Column(
@@ -156,16 +162,16 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                   children: [
                     Row(
                       children: [
-                        const Text('Chitzy', style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold)),
+                        Text('Chitzy', style: TextStyle(color: fg, fontSize: 28, fontWeight: FontWeight.bold)),
                         const Spacer(),
-                        _HeaderIcon(icon: Icons.search_rounded, onTap: () => setState(() {
+                        _HeaderIcon(icon: Icons.search_rounded, color: fg, bg: iconBg, onTap: () => setState(() {
                           _isSearching = !_isSearching;
                           if (!_isSearching) _searchController.clear();
                         })),
                         const SizedBox(width: 8),
-                        _HeaderIcon(icon: Icons.camera_alt_outlined, onTap: () {}),
+                        _HeaderIcon(icon: Icons.camera_alt_outlined, color: fg, bg: iconBg, onTap: () {}),
                         const SizedBox(width: 8),
-                        _HeaderIcon(icon: Icons.more_vert_rounded, onTap: () {}),
+                        _HeaderIcon(icon: Icons.more_vert_rounded, color: fg, bg: iconBg, onTap: () {}),
                       ],
                     ),
                     if (_isSearching) ...[
@@ -173,17 +179,17 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                       Container(
                         height: 40,
                         padding: const EdgeInsets.symmetric(horizontal: 12),
-                        decoration: BoxDecoration(color: Colors.white.withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
+                        decoration: BoxDecoration(color: searchBg, borderRadius: BorderRadius.circular(20)),
                         child: TextField(
                           controller: _searchController,
                           autofocus: true,
-                          style: const TextStyle(color: Colors.white, fontSize: 14),
+                          style: TextStyle(color: fg, fontSize: 14),
                           onChanged: (_) => setState(() {}),
                           decoration: InputDecoration(
                             hintText: 'Search...',
-                            hintStyle: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 14),
+                            hintStyle: TextStyle(color: fgSubtle, fontSize: 14),
                             border: InputBorder.none,
-                            prefixIcon: Icon(Icons.search, color: Colors.white.withOpacity(0.5), size: 18),
+                            prefixIcon: Icon(Icons.search, color: fgSubtle, size: 18),
                             isDense: true,
                           ),
                         ),
@@ -204,11 +210,11 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                               margin: const EdgeInsets.only(right: 8),
                               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
                               decoration: BoxDecoration(
-                                color: isActive ? Colors.white : Colors.white.withOpacity(0.1),
+                                color: isActive ? fg : chipBg,
                                 borderRadius: BorderRadius.circular(20),
                               ),
                               child: Text(f, style: TextStyle(
-                                color: isActive ? Colors.black : Colors.white.withOpacity(0.7),
+                                color: isActive ? Colors.black : fgSubtle,
                                 fontSize: 13,
                                 fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
                               )),
@@ -309,39 +315,42 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
 
                           items.add(
                             Builder(
-                              builder: (itemContext) => _ChatItem(
-                                name: displayName,
-                                message: lastMsg?.content ?? 'No messages yet',
-                                time: timeStr,
-                                unreadCount: chat.getUnreadCount(currentUserId),
-                                isOnline: isOnline,
-                                isGroup: chat.type == ChatType.group,
-                                isPinned: chat.isPinned,
-                                imageUrl: displayAvatar,
-                                onTap: () {
-                                  if (chat.type == ChatType.group) {
-                                    Navigator.push(context, MaterialPageRoute(
-                                      builder: (_) => GroupChatScreen(chatId: chat.id, groupName: displayName),
-                                    ));
-                                  } else {
-                                    Navigator.push(context, MaterialPageRoute(
-                                      builder: (_) => ChatScreen(
-                                        chatId: chat.id,
-                                        chatName: displayName,
-                                        isOnline: isOnline,
-                                        imageUrl: displayAvatar,
-                                      ),
-                                    ));
-                                  }
-                                },
-                                onLongPress: () {
-                                  final RenderBox box = itemContext.findRenderObject() as RenderBox;
-                                  final position = box.localToGlobal(Offset.zero);
-                                  setState(() {
-                                    _selectedChat = chat;
-                                    _selectedChatPosition = position;
-                                  });
-                                },
+                              builder: (itemContext) => _SwipeableChat(
+                                onDelete: () => chatProvider.deleteChat(chat.id),
+                                child: _ChatItem(
+                                  name: displayName,
+                                  message: lastMsg?.content ?? 'No messages yet',
+                                  time: timeStr,
+                                  unreadCount: chat.getUnreadCount(currentUserId),
+                                  isOnline: isOnline,
+                                  isGroup: chat.type == ChatType.group,
+                                  isPinned: chat.isPinned,
+                                  imageUrl: displayAvatar,
+                                  onTap: () {
+                                    if (chat.type == ChatType.group) {
+                                      Navigator.push(context, MaterialPageRoute(
+                                        builder: (_) => GroupChatScreen(chatId: chat.id, groupName: displayName),
+                                      ));
+                                    } else {
+                                      Navigator.push(context, MaterialPageRoute(
+                                        builder: (_) => ChatScreen(
+                                          chatId: chat.id,
+                                          chatName: displayName,
+                                          isOnline: isOnline,
+                                          imageUrl: displayAvatar,
+                                        ),
+                                      ));
+                                    }
+                                  },
+                                  onLongPress: () {
+                                    final RenderBox box = itemContext.findRenderObject() as RenderBox;
+                                    final position = box.localToGlobal(Offset.zero);
+                                    setState(() {
+                                      _selectedChat = chat;
+                                      _selectedChatPosition = position;
+                                    });
+                                  },
+                                ),
                               ),
                             ),
                           );
@@ -361,28 +370,10 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                         }
 
                         return SliverToBoxAdapter(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            child: Container(
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                  colors: [
-                                    Colors.white.withOpacity(0.10),
-                                    Colors.white.withOpacity(0.03),
-                                  ],
-                                ),
-                                borderRadius: BorderRadius.circular(24),
-                              ),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: items,
-                              ),
-                            ),
-                          ).animate()
-                            .fadeIn(duration: 400.ms)
-                            .slideY(begin: 0.06, end: 0, curve: Curves.easeOutQuart),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: items,
+                          ),
                         );
                       },
                     ),
@@ -695,6 +686,12 @@ class _ChatItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool hasUnread = unreadCount > 0;
+    const fg = Colors.white;
+    final fgSubtle = Colors.white.withOpacity(0.38);
+    final fgMid = Colors.white.withOpacity(0.9);
+    final timeColor = Colors.white.withOpacity(0.30);
+    final pinColor = Colors.white.withOpacity(0.25);
+    const onlineBorder = Colors.black;
 
     return GestureDetector(
       onTap: onTap,
@@ -702,12 +699,11 @@ class _ChatItem extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       child: Stack(
         children: [
-          // Row content
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 18),
             child: Row(
               children: [
-                // Avatar with orange online dot
+                // Avatar
                 Stack(
                   children: [
                     AppAvatar(
@@ -727,13 +723,8 @@ class _ChatItem extends StatelessWidget {
                           decoration: BoxDecoration(
                             color: const Color(0xFFFF8C00),
                             shape: BoxShape.circle,
-                            border: Border.all(color: Colors.black, width: 2),
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(0xFFFF8C00).withOpacity(0.5),
-                                blurRadius: 4,
-                              ),
-                            ],
+                            border: Border.all(color: onlineBorder, width: 2),
+                            boxShadow: [BoxShadow(color: const Color(0xFFFF8C00).withOpacity(0.5), blurRadius: 4)],
                           ),
                         ),
                       ),
@@ -750,7 +741,7 @@ class _ChatItem extends StatelessWidget {
                       Text(
                         name,
                         style: TextStyle(
-                          color: Colors.white,
+                          color: fg,
                           fontSize: 15,
                           fontWeight: hasUnread ? FontWeight.bold : FontWeight.w500,
                           letterSpacing: 0.1,
@@ -769,9 +760,7 @@ class _ChatItem extends StatelessWidget {
                             child: Text(
                               message,
                               style: TextStyle(
-                                color: hasUnread
-                                    ? Colors.white.withOpacity(0.9)
-                                    : Colors.white.withOpacity(0.38),
+                                color: hasUnread ? fgMid : fgSubtle,
                                 fontSize: 13,
                                 fontWeight: hasUnread ? FontWeight.w500 : FontWeight.normal,
                               ),
@@ -796,9 +785,7 @@ class _ChatItem extends StatelessWidget {
                       Text(
                         time,
                         style: TextStyle(
-                          color: hasUnread
-                              ? const Color(0xFFFF8C00)
-                              : Colors.white.withOpacity(0.30),
+                          color: hasUnread ? const Color(0xFFFF8C00) : timeColor,
                           fontSize: 11,
                           fontWeight: hasUnread ? FontWeight.w600 : FontWeight.normal,
                         ),
@@ -810,25 +797,16 @@ class _ChatItem extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: const Color(0xFFFF3B30),
                           borderRadius: BorderRadius.circular(10),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFFFF3B30).withOpacity(0.4),
-                              blurRadius: 6,
-                            ),
-                          ],
+                          boxShadow: [BoxShadow(color: const Color(0xFFFF3B30).withOpacity(0.4), blurRadius: 6)],
                         ),
                         child: Text(
                           unreadCount > 99 ? '99+' : unreadCount.toString(),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
                         ),
                       ),
                     ] else if (isPinned) ...[
                       const SizedBox(height: 6),
-                      Icon(Icons.push_pin_rounded, size: 13, color: Colors.white.withOpacity(0.25)),
+                      Icon(Icons.push_pin_rounded, size: 13, color: pinColor),
                     ],
                   ],
                 ),
@@ -839,20 +817,12 @@ class _ChatItem extends StatelessWidget {
           // Orange left accent bar for unread
           if (hasUnread)
             Positioned(
-              left: 0,
-              top: 10,
-              bottom: 10,
-              width: 3,
+              left: 0, top: 10, bottom: 10, width: 3,
               child: Container(
                 decoration: BoxDecoration(
                   color: const Color(0xFFFF8C00),
                   borderRadius: BorderRadius.circular(2),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFFFF8C00).withOpacity(0.6),
-                      blurRadius: 6,
-                    ),
-                  ],
+                  boxShadow: [BoxShadow(color: const Color(0xFFFF8C00).withOpacity(0.6), blurRadius: 6)],
                 ),
               ),
             ),
@@ -866,7 +836,9 @@ class _ChatItem extends StatelessWidget {
 class _HeaderIcon extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
-  const _HeaderIcon({required this.icon, required this.onTap});
+  final Color color;
+  final Color bg;
+  const _HeaderIcon({required this.icon, required this.onTap, required this.color, required this.bg});
 
   @override
   Widget build(BuildContext context) {
@@ -875,12 +847,204 @@ class _HeaderIcon extends StatelessWidget {
       child: Container(
         width: 36,
         height: 36,
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.1),
-          shape: BoxShape.circle,
-        ),
-        child: Icon(icon, color: Colors.white, size: 18),
+        decoration: BoxDecoration(color: bg, shape: BoxShape.circle),
+        child: Icon(icon, color: color, size: 18),
       ),
+    );
+  }
+}
+
+class _SwipeableChat extends StatefulWidget {
+  final Widget child;
+  final VoidCallback onDelete;
+  const _SwipeableChat({required this.child, required this.onDelete});
+
+  @override
+  State<_SwipeableChat> createState() => _SwipeableChatState();
+}
+
+class _SwipeableChatState extends State<_SwipeableChat>
+    with SingleTickerProviderStateMixin {
+  static const double _snapButtonWidth = 72.0;
+  static const double _snapThreshold = 36.0;
+  double _itemWidth = 0.0;
+
+  late AnimationController _controller;
+  late Animation<double> _offsetAnim;
+  double _dragOffset = 0.0;
+  bool _isOpen = false;
+  bool _isPendingDelete = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 240),
+    );
+    _offsetAnim = Tween<double>(begin: 0, end: 0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _snapTo(double target) {
+    _offsetAnim = Tween<double>(begin: _dragOffset, end: target).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
+    );
+    _controller.forward(from: 0).then((_) {
+      if (mounted) setState(() => _dragOffset = target);
+    });
+  }
+
+  void _onDragUpdate(DragUpdateDetails details) {
+    if (_isPendingDelete) return;
+    setState(() {
+      _dragOffset = (_dragOffset + details.delta.dx).clamp(-_itemWidth, 80.0);
+    });
+  }
+
+  void _onDragEnd(DragEndDetails details) {
+    if (_isPendingDelete) return;
+    final velocity = details.primaryVelocity ?? 0;
+    final halfWidth = _itemWidth / 2;
+
+    if (_dragOffset > 40 || velocity > 400) {
+      _snapTo(0);
+      Future.delayed(const Duration(milliseconds: 150), () {
+        if (mounted) _showDeleteDialog();
+      });
+    } else if (_dragOffset < -halfWidth || velocity < -1000) {
+      setState(() => _isPendingDelete = true);
+      _snapTo(-halfWidth);
+      Future.delayed(const Duration(milliseconds: 180), () {
+        if (mounted) _showDeleteDialog();
+      });
+    } else if (velocity < -300 || _dragOffset < -_snapThreshold) {
+      _isOpen = true;
+      _snapTo(-_snapButtonWidth);
+    } else {
+      _isOpen = false;
+      _snapTo(0);
+    }
+  }
+
+  void _confirmDelete() {
+    setState(() => _isPendingDelete = false);
+    widget.onDelete();
+  }
+
+  void _cancelDelete() {
+    setState(() => _isPendingDelete = false);
+    _snapTo(0);
+  }
+
+  void _close() {
+    _isOpen = false;
+    _snapTo(0);
+  }
+
+  void _showDeleteDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E2435),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Delete Chat?',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        content: const Text(
+          'This conversation will be permanently deleted.',
+          style: TextStyle(color: Colors.white60, fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              _cancelDelete();
+            },
+            child: const Text('No',
+                style: TextStyle(color: Colors.white54, fontSize: 15)),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              _confirmDelete();
+            },
+            child: const Text('Yes',
+                style: TextStyle(
+                    color: Color(0xFFFF3B30),
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        _itemWidth = constraints.maxWidth;
+        return GestureDetector(
+          onHorizontalDragUpdate: _onDragUpdate,
+          onHorizontalDragEnd: _onDragEnd,
+          onTap: _isOpen ? _close : null,
+          child: ClipRect(
+            child: Stack(
+              children: [
+                // Red background revealed on left swipe
+                Positioned.fill(
+                  child: AnimatedBuilder(
+                    animation: _controller,
+                    builder: (_, __) {
+                      final raw = _controller.isAnimating
+                          ? _offsetAnim.value
+                          : _dragOffset;
+                      final revealed = (-raw).clamp(0.0, double.infinity);
+                      return Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          Container(
+                            width: revealed,
+                            color: const Color(0xFFFF3B30),
+                            child: revealed > 40
+                                ? const Center(
+                                    child: Icon(Icons.delete_rounded,
+                                        color: Colors.white, size: 24),
+                                  )
+                                : null,
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+                // Sliding chat row
+                AnimatedBuilder(
+                  animation: _controller,
+                  builder: (context, child) {
+                    final offset = _controller.isAnimating
+                        ? _offsetAnim.value
+                        : _dragOffset;
+                    return Transform.translate(
+                      offset: Offset(offset, 0),
+                      child: child,
+                    );
+                  },
+                  child: widget.child,
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

@@ -1,19 +1,17 @@
 import 'package:flutter/material.dart';
 
 enum BackgroundStyle {
-  deepBlack,
-  midnightGradient,
-  oceanMist,
-  cyberPurple,
-  glassMesh,
-  pureWhite,
   nebula,
+  deepBlack,
 }
 
 class ThemeProvider extends ChangeNotifier {
   BackgroundStyle _backgroundStyle = BackgroundStyle.nebula;
+  bool _isDarkMode = true;
 
   BackgroundStyle get backgroundStyle => _backgroundStyle;
+  bool get isDarkMode => _isDarkMode;
+  bool get isLightTheme => !_isDarkMode;
 
   void setBackgroundStyle(BackgroundStyle style) {
     if (_backgroundStyle != style) {
@@ -22,11 +20,23 @@ class ThemeProvider extends ChangeNotifier {
     }
   }
 
-  /// True when the active theme has a light/white background.
-  /// Use this to swap text and icon colours from white to dark.
-  bool get isLightTheme => _backgroundStyle == BackgroundStyle.pureWhite;
+  void setDarkMode(bool value) {
+    if (_isDarkMode != value) {
+      _isDarkMode = value;
+      notifyListeners();
+    }
+  }
 
   Decoration get backgroundDecoration {
+    if (!_isDarkMode) {
+      return const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFFF0F4FF), Color(0xFFFFFFFF)],
+        ),
+      );
+    }
     switch (_backgroundStyle) {
       case BackgroundStyle.nebula:
         return const BoxDecoration(
@@ -36,51 +46,7 @@ class ThemeProvider extends ChangeNotifier {
           ),
         );
       case BackgroundStyle.deepBlack:
-        return const BoxDecoration(color: Color(0xFF1B202D));
-      case BackgroundStyle.midnightGradient:
-        return const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF0F172A), Color(0xFF1E1B4B)],
-          ),
-        );
-      case BackgroundStyle.oceanMist:
-        return const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF064E3B), Color(0xFF0F766E)],
-          ),
-        );
-      case BackgroundStyle.cyberPurple:
-        return const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF2E1065), Color(0xFF4C1D95)],
-          ),
-        );
-      case BackgroundStyle.glassMesh:
-        return const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF002D8B), // Vibrant Royal Blue
-              Color(0xFF00A3FF), // Bright Sky Blue
-            ],
-            stops: [0.0, 1.0],
-          ),
-        );
-      case BackgroundStyle.pureWhite:
-        return const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFFFFFFFF), Color(0xFFF0F4FF)],
-          ),
-        );
+        return const BoxDecoration(color: Color(0xFF000000));
     }
   }
 }
