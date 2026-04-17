@@ -400,9 +400,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
         }),
         child: Container(
           color: Colors.black.withOpacity(0.5),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-            child: Stack(
+          child: Stack(
               children: [
                 Positioned(
                   top: _selectedChatPosition!.dy,
@@ -415,22 +413,20 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                         scale: 1.05,
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(24),
-                          child: BackdropFilter(
-                            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                            child: Container(
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                  colors: [
-                                    Colors.white.withOpacity(0.14),
-                                    Colors.white.withOpacity(0.04),
-                                  ],
-                                ),
-                                borderRadius: BorderRadius.circular(24),
-                                border: Border.all(color: Colors.white.withOpacity(0.18), width: 1),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  Colors.white.withOpacity(0.14),
+                                  Colors.white.withOpacity(0.04),
+                                ],
                               ),
-                              child: _ChatItem(
+                              borderRadius: BorderRadius.circular(24),
+                              border: Border.all(color: Colors.white.withOpacity(0.18), width: 1),
+                            ),
+                            child: _ChatItem(
                                 name: _selectedChat!.getDisplayName(provider.currentUserId ?? ''),
                                 message: _selectedChat!.lastMessage?.content ?? 'No messages yet',
                                 time: '',
@@ -444,8 +440,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                               ),
                             ),
                           ),
-                        ),
-                      ).animate()
+                        ).animate()
                         .scale(duration: 400.ms, curve: Curves.easeOutBack, begin: const Offset(0.95, 0.95))
                         .fadeIn(),
                       
@@ -517,7 +512,6 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
             ),
           ),
         ),
-      ),
     );
   }
 
@@ -549,21 +543,15 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
         margin: const EdgeInsets.only(right: 10),
         child: Column(
           children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(14),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                child: Container(
-                  width: 68,
-                  height: 68,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
-                  ),
-                  child: const Icon(Icons.add_rounded, color: Colors.white70, size: 28),
-                ),
+            Container(
+              width: 68,
+              height: 68,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
               ),
+              child: const Icon(Icons.add_rounded, color: Colors.white70, size: 28),
             ),
             const SizedBox(height: 6),
             const Text('You', style: TextStyle(color: Colors.white54, fontSize: 11)),

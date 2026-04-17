@@ -101,57 +101,54 @@ class _HomeScreenState extends State<HomeScreen> {
                 final pillLeft = pillIdx * itemWidth + itemWidth * 0.06;
                 final pillWidth = itemWidth * 0.88;
 
-                return ClipRRect(
-                  borderRadius: BorderRadius.circular(36),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
-                    child: Container(
-                      height: 56,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            Colors.white.withOpacity(0.12),
-                            Colors.white.withOpacity(0.05),
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(36),
-                        border: Border.all(
-                          color: Colors.white.withOpacity(0.18),
-                          width: 1,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.3),
-                            blurRadius: 20,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
+                return Container(
+                  height: 56,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Colors.white.withOpacity(0.13),
+                        Colors.white.withOpacity(0.06),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(36),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.18),
+                      width: 1,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.35),
+                        blurRadius: 20,
+                        offset: const Offset(0, 8),
                       ),
-                      child: Stack(
-                        children: [
-                          // Selected pill
-                          AnimatedPositioned(
-                            duration: const Duration(milliseconds: 300),
-                            curve: Curves.easeInOut,
-                            left: pillLeft,
-                            top: 5,
-                            width: pillWidth,
-                            height: 46,
-                            child: _GlassPill(),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(36),
+                    child: Stack(
+                      children: [
+                        // Selected pill
+                        AnimatedPositioned(
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeInOut,
+                          left: pillLeft,
+                          top: 5,
+                          width: pillWidth,
+                          height: 46,
+                          child: _GlassPill(),
+                        ),
+                        // Icons & labels
+                        Positioned.fill(
+                          child: Row(
+                            children: [
+                              for (int i = 0; i < _navItems.length; i++)
+                                Expanded(child: _buildNavItem(i)),
+                            ],
                           ),
-                          // Icons & labels
-                          Positioned.fill(
-                            child: Row(
-                              children: [
-                                for (int i = 0; i < _navItems.length; i++)
-                                  Expanded(child: _buildNavItem(i)),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
                 );
@@ -224,9 +221,7 @@ class _GlassPill extends StatelessWidget {
   Widget build(BuildContext context) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(26),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-        child: Stack(
+      child: Stack(
           children: [
             Container(
               decoration: BoxDecoration(
@@ -269,7 +264,6 @@ class _GlassPill extends StatelessWidget {
             ),
           ],
         ),
-      ),
     );
   }
 }

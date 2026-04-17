@@ -60,13 +60,15 @@ class GlassContainer extends StatelessWidget {
       child: child,
     );
     
-    // Add ClipRRect to constrain the blur to the container
+    // Only apply BackdropFilter when blur > 0 — each filter costs a full GPU pass
     Widget glassEffect = ClipRRect(
       borderRadius: effectiveBorderRadius,
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
-        child: content,
-      ),
+      child: blur > 0
+          ? BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
+              child: content,
+            )
+          : content,
     );
 
     if (margin != null) {
