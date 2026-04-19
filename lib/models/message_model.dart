@@ -2,14 +2,15 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:convert';
 
 enum MessageType {
-  text,
-  image,
-  video,
-  audio,
-  file,
-  sticker,
-  aiSuggestion,
-  translated,
+  text,        // 0
+  image,       // 1
+  video,       // 2
+  audio,       // 3
+  file,        // 4
+  sticker,     // 5
+  aiSuggestion,// 6
+  translated,  // 7
+  gif,         // 8
 }
 
 enum MessageStatus {

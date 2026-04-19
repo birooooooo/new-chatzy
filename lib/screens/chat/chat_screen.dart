@@ -25,6 +25,8 @@ import '../../widgets/audio_message_bubble.dart';
 import '../../widgets/swipe_to_reply.dart';
 import '../../widgets/poll_widget.dart';
 import '../../widgets/app_widgets.dart';
+import '../../widgets/gif_picker_sheet.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class ChatScreen extends StatefulWidget {
   final String chatId;
@@ -278,48 +280,43 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
   Future<void> _pickFile() async {
     try {
+      // withData: true on all platforms — avoids Android content URI issues
+      // where File(path).existsSync() returns false for content:// paths
       FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['jpg', 'jpeg', 'png', 'gif', 'pdf', 'doc', 'docx'],
-        withData: kIsWeb, // On web we need bytes, not path
+        withData: true,
       );
 
       if (result == null) return;
       final file = result.files.single;
+      final bytes = file.bytes;
+      if (bytes == null) return;
+
       final ext = file.extension?.toLowerCase() ?? '';
       final isImage = ['jpg', 'jpeg', 'png', 'gif'].contains(ext);
       final type = isImage ? MessageType.image : MessageType.file;
 
       final chatProvider = Provider.of<ChatProvider>(context, listen: false);
 
-      if (kIsWeb) {
-        // On web: upload bytes directly to Firebase Storage
-        final bytes = file.bytes;
-        if (bytes == null) return;
-        final storageService = chatProvider.storageService;
-        final url = await storageService.uploadChatImageBytes(
-          bytes, widget.chatId, file.name,
-        );
-        if (url != null) {
-          chatProvider.addMessage(widget.chatId, url, type: type);
-        }
-      } else {
-        // On mobile/desktop: use file path
-        final path = file.path;
-        if (path == null) return;
-        chatProvider.addMessage(widget.chatId, path, type: type);
-      }
+      // Upload bytes directly — works on Android, iOS, and Web
+      final url = await chatProvider.storageService.uploadChatImageBytes(
+        bytes, widget.chatId, file.name,
+      );
 
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(0,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOut);
+      if (url != null && mounted) {
+        chatProvider.addMessage(widget.chatId, url, type: type);
+        if (_scrollController.hasClients) {
+          _scrollController.animateTo(0,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOut);
+        }
       }
     } catch (e) {
       debugPrint('Error picking file: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to pick file')),
+          const SnackBar(content: Text('Failed to send file')),
         );
       }
     }
@@ -803,76 +800,19 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     );
   }
 
-  void _showGifPicker() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => GlassContainer(
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
-        blur: 25,
-        gradient: LinearGradient(
-          colors: [Colors.black.withOpacity(0.9), Colors.black.withOpacity(0.8)],
-        ),
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Trending GIFs',
-              style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 20),
-            SizedBox(
-              height: 180,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                children: [
-                  _buildGifCategory('Funny', 'https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJocXh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKSjPBDpX/giphy.gif'),
-                  _buildGifCategory('Love', 'https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJocXh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/l41lT9n9qX6i67v6u/giphy.gif'),
-                  _buildGifCategory('Reaction', 'https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJocXh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKMGfN5O9O/giphy.gif'),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-          ],
-        ),
-      ),
+  Future<void> _showGifPicker() async {
+    final gif = await GifPickerSheet.show(context);
+    if (gif == null || !mounted) return;
+    final chatProvider = Provider.of<ChatProvider>(context, listen: false);
+    chatProvider.addMessage(
+      widget.chatId,
+      gif.originalUrl,
+      type: MessageType.gif,
     );
-  }
-
-  Widget _buildGifCategory(String label, String url) {
-    return GestureDetector(
-      onTap: () {
-        final chatProvider = Provider.of<ChatProvider>(context, listen: false);
-        chatProvider.addMessage(widget.chatId, url, type: MessageType.image);
-        Navigator.pop(context);
-      },
-      child: Container(
-        width: 140,
-        margin: const EdgeInsets.only(right: 12),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          image: DecorationImage(image: NetworkImage(url), fit: BoxFit.cover),
-        ),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            gradient: LinearGradient(
-              begin: Alignment.bottomCenter,
-              end: Alignment.topCenter,
-              colors: [Colors.black.withOpacity(0.8), Colors.transparent],
-            ),
-          ),
-          alignment: Alignment.bottomCenter,
-          padding: const EdgeInsets.all(12),
-          child: Text(
-            label,
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-          ),
-        ),
-      ),
-    ).animate().scale();
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(0,
+          duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
+    }
   }
 
   Widget _buildReplyPreview() {
@@ -1104,7 +1044,7 @@ class _GlassMessageBubble extends StatelessWidget {
                 
                 GestureDetector(
                   onTap: () {
-                    if (type == MessageType.image) {
+                    if (type == MessageType.image || type == MessageType.gif) {
                       _openGallery(context);
                     }
                   },
@@ -1128,6 +1068,8 @@ class _GlassMessageBubble extends StatelessWidget {
                       children: [
                         if (text.startsWith('POLL:'))
                           _buildPollContent(context)
+                        else if (type == MessageType.gif)
+                          _buildGifContent(context)
                         else if (type == MessageType.image)
                           _buildImageContent(context)
                         else if (type == MessageType.file)
@@ -1214,6 +1156,106 @@ class _GlassMessageBubble extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 12),
                 ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Renders an animated GIF bubble — like Telegram: no background box,
+  /// full-width animated image with a small "GIF" badge and time overlay.
+  Widget _buildGifContent(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(18),
+      child: Stack(
+        children: [
+          // Animated GIF via CachedNetworkImage
+          SizedBox(
+            width: 240,
+            height: 180,
+            child: CachedNetworkImage(
+              imageUrl: text,
+              fit: BoxFit.cover,
+              placeholder: (_, __) => Container(
+                color: Colors.white.withOpacity(0.06),
+                child: const Center(
+                  child: SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Colors.white38),
+                  ),
+                ),
+              ),
+              errorWidget: (_, __, ___) => Container(
+                color: Colors.white.withOpacity(0.06),
+                child: const Icon(Icons.broken_image_outlined,
+                    color: Colors.white38, size: 36),
+              ),
+            ),
+          ),
+
+          // Dark gradient at bottom for time readability
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: 36,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                  colors: [
+                    Colors.black.withOpacity(0.6),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          // "GIF" badge — top left, like Telegram
+          Positioned(
+            top: 7,
+            left: 7,
+            child: Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.55),
+                borderRadius: BorderRadius.circular(5),
+              ),
+              child: const Text(
+                'GIF',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.8,
+                ),
+              ),
+            ),
+          ),
+
+          // Time + status — bottom right, like Telegram
+          Positioned(
+            bottom: 6,
+            right: 8,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  time,
+                  style: const TextStyle(
+                      color: Colors.white70, fontSize: 10),
+                ),
+                if (isMe) ...[
+                  const SizedBox(width: 3),
+                  _buildStatusIcon(),
+                ],
               ],
             ),
           ),

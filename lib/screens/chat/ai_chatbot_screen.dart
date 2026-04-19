@@ -166,7 +166,7 @@ class _AiChatbotScreenState extends State<AiChatbotScreen> {
                 ),
               ),
               if (_isTyping) _buildTypingIndicator(),
-              const SizedBox(height: 110), // Height of docked input + safe area
+              const SizedBox(height: 190), // reserve room for input box + nav bar
             ],
           ),
           Positioned(
@@ -302,7 +302,7 @@ class _AiChatbotScreenState extends State<AiChatbotScreen> {
 
   Widget _buildInput() {
     return Container(
-      padding: EdgeInsets.fromLTRB(20, 0, 20, MediaQuery.of(context).padding.bottom + 10),
+      padding: EdgeInsets.fromLTRB(20, 0, 20, MediaQuery.of(context).padding.bottom + 84),
       child: GlassContainer(
         padding: const EdgeInsets.all(12),
         borderRadius: BorderRadius.circular(32),
@@ -317,7 +317,6 @@ class _AiChatbotScreenState extends State<AiChatbotScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Prompt Input
             TextField(
               focusNode: _focusNode,
               controller: _controller,
@@ -334,13 +333,10 @@ class _AiChatbotScreenState extends State<AiChatbotScreen> {
               ),
               onSubmitted: _sendMessage,
             ),
-            
             const SizedBox(height: 12),
-            
-            // Interaction Bar
             Row(
               children: [
-                // Tag Friend Button (@)
+                // @ button
                 GestureDetector(
                   onTap: () {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -370,10 +366,8 @@ class _AiChatbotScreenState extends State<AiChatbotScreen> {
                     ),
                   ),
                 ),
-                
                 const Spacer(),
-                
-                // Voice / Soundwave Button (Blue tint)
+                // Voice button
                 GestureDetector(
                   onTap: () {},
                   child: GlassContainer(
@@ -383,34 +377,30 @@ class _AiChatbotScreenState extends State<AiChatbotScreen> {
                     blur: 10,
                     opacity: 0.15,
                     color: Colors.blue.withOpacity(0.2),
-                    child: Icon(
-                      Icons.graphic_eq_rounded,
-                      color: Colors.blue.shade300,
-                      size: 20,
-                    ),
+                    child: Icon(Icons.graphic_eq_rounded,
+                        color: Colors.blue.shade300, size: 20),
                   ),
                 ),
-                
                 const SizedBox(width: 8),
-                
-                // Send Button (Vibrant Green)
+                // Send button
                 GestureDetector(
                   onTap: () => _sendMessage(_controller.text),
                   child: Container(
                     width: 42,
                     height: 42,
                     decoration: BoxDecoration(
-                      color: const Color(0xFF4ADE80), // Vibrant green
+                      color: const Color(0xFF4ADE80),
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
                           color: const Color(0xFF4ADE80).withOpacity(0.3),
                           blurRadius: 10,
                           offset: const Offset(0, 2),
-                        )
+                        ),
                       ],
                     ),
-                    child: const Icon(Icons.arrow_upward_rounded, color: Colors.black, size: 22),
+                    child: const Icon(Icons.arrow_upward_rounded,
+                        color: Colors.black, size: 22),
                   ),
                 ),
               ],

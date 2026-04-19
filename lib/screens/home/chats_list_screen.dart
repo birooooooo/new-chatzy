@@ -92,6 +92,27 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
     }
   }
 
+  /// Returns a Telegram-style last message preview string based on message type.
+  String _formatLastMessage(MessageModel? msg) {
+    if (msg == null) return 'No messages yet';
+    switch (msg.type) {
+      case MessageType.image:
+        return '📷 Photo';
+      case MessageType.gif:
+        return 'GIF';
+      case MessageType.video:
+        return '📹 Video';
+      case MessageType.audio:
+        return '🎤 Voice message';
+      case MessageType.file:
+        return '📎 File';
+      case MessageType.sticker:
+        return '🖼 Sticker';
+      default:
+        return msg.content;
+    }
+  }
+
   String _relativeTime(DateTime t) {
     final diff = DateTime.now().difference(t);
     if (diff.inSeconds < 60) return 'just now';
@@ -319,7 +340,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                                 onDelete: () => chatProvider.deleteChat(chat.id),
                                 child: _ChatItem(
                                   name: displayName,
-                                  message: lastMsg?.content ?? 'No messages yet',
+                                  message: _formatLastMessage(lastMsg),
                                   time: timeStr,
                                   unreadCount: chat.getUnreadCount(currentUserId),
                                   isOnline: isOnline,
@@ -430,7 +451,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                             ),
                             child: _ChatItem(
                                 name: _selectedChat!.getDisplayName(provider.currentUserId ?? ''),
-                                message: _selectedChat!.lastMessage?.content ?? 'No messages yet',
+                                message: _formatLastMessage(_selectedChat!.lastMessage),
                                 time: '',
                                 unreadCount: _selectedChat!.getUnreadCount(provider.currentUserId),
                                 isOnline: _selectedChat!.participants.any((p) => p.id != provider.currentUserId && p.isOnline),
