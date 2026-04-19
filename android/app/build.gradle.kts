@@ -43,3 +43,8 @@ android {
 flutter {
     source = "../.."
 }
+
+dependencies {
+    // App Check debug provider — registers before Flutter starts
+    debugImplementation("com.google.firebase:firebase-appcheck-debug:18.0.0")
+}

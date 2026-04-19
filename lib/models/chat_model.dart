@@ -45,7 +45,15 @@ class ChatModel {
   int getUnreadCount(String? userId) {
     if (userId == null) return 0;
     final count = unreadCounts[userId];
-    if (count is int) return count;
+    // If Firestore has an explicit value (even 0 = read), trust it
+    if (count != null) return (count as num).toInt();
+    // No Firestore tracking yet — fall back to lastMessage sender check
+    // If last message is from someone else, assume unread
+    if (lastMessage != null &&
+        lastMessage!.senderId.isNotEmpty &&
+        lastMessage!.senderId != userId) {
+      return 1;
+    }
     return 0;
   }
 

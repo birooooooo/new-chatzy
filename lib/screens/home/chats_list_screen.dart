@@ -325,6 +325,8 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                                   isOnline: isOnline,
                                   isGroup: chat.type == ChatType.group,
                                   isPinned: chat.isPinned,
+                                  isLastMessageFromMe: lastMsg?.senderId == currentUserId,
+                                  isLastMessageRead: lastMsg?.status == MessageStatus.read,
                                   imageUrl: displayAvatar,
                                   onTap: () {
                                     if (chat.type == ChatType.group) {
@@ -434,6 +436,8 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                                 isOnline: _selectedChat!.participants.any((p) => p.id != provider.currentUserId && p.isOnline),
                                 isGroup: _selectedChat!.type == ChatType.group,
                                 isPinned: _selectedChat!.isPinned,
+                                isLastMessageFromMe: _selectedChat!.lastMessage?.senderId == provider.currentUserId,
+                                isLastMessageRead: _selectedChat!.lastMessage?.status == MessageStatus.read,
                                 imageUrl: _selectedChat!.getDisplayAvatar(provider.currentUserId ?? ''),
                                 onTap: () {},
                                 onLongPress: () {},
@@ -653,6 +657,8 @@ class _ChatItem extends StatelessWidget {
   final bool isOnline;
   final bool isGroup;
   final bool isPinned;
+  final bool isLastMessageFromMe;
+  final bool isLastMessageRead;
   final VoidCallback onTap;
   final VoidCallback onLongPress;
   final String? imageUrl;
@@ -667,6 +673,8 @@ class _ChatItem extends StatelessWidget {
     required this.isPinned,
     required this.onTap,
     required this.onLongPress,
+    this.isLastMessageFromMe = false,
+    this.isLastMessageRead = false,
     this.imageUrl,
   });
 
@@ -740,8 +748,14 @@ class _ChatItem extends StatelessWidget {
                       const SizedBox(height: 4),
                       Row(
                         children: [
-                          if (!hasUnread) ...[
-                            Icon(Icons.done_all, size: 14, color: Colors.blue.shade300),
+                          // Double check only for messages I sent
+                          if (isLastMessageFromMe) ...[
+                            Icon(
+                              Icons.done_all,
+                              size: 14,
+                              // Blue only when receiver has READ it, grey otherwise
+                              color: isLastMessageRead ? Colors.blue.shade300 : Colors.white38,
+                            ),
                             const SizedBox(width: 4),
                           ],
                           Expanded(
@@ -750,7 +764,7 @@ class _ChatItem extends StatelessWidget {
                               style: TextStyle(
                                 color: hasUnread ? fgMid : fgSubtle,
                                 fontSize: 13,
-                                fontWeight: hasUnread ? FontWeight.w500 : FontWeight.normal,
+                                fontWeight: hasUnread ? FontWeight.w600 : FontWeight.normal,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,

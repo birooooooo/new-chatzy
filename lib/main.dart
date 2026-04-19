@@ -14,6 +14,7 @@ import 'screens/home/home_screen.dart';
 import 'services/auth_service.dart';
 import 'services/mock_auth_service.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
 import 'dart:io';
 import 'dart:ui';
 
@@ -41,7 +42,23 @@ void main() async {
     debugPrint("Firebase initialized successfully");
   } catch (e) {
     debugPrint("Firebase initialization failed or skipped for this platform: $e");
-    debugPrint("Falling back to MockAuthService if needed.");
+  }
+
+  // Activate App Check separately so it never blocks Firebase init
+  if (firebaseInitialized) {
+    try {
+      await FirebaseAppCheck.instance.activate(
+        androidProvider: kReleaseMode
+            ? AndroidProvider.playIntegrity
+            : AndroidProvider.debug,
+        appleProvider: kReleaseMode
+            ? AppleProvider.appAttest
+            : AppleProvider.debug,
+      );
+      debugPrint("App Check activated");
+    } catch (e) {
+      debugPrint("App Check activation failed (non-fatal): $e");
+    }
   }
 
   MediaKit.ensureInitialized();

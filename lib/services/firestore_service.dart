@@ -84,33 +84,61 @@ class FirestoreService {
   /// Send a message
   Future<void> sendMessage(String chatId, MessageModel message, {List<String> otherParticipantIds = const []}) async {
     try {
-      final batch = _firestore.batch();
+      final chatRef = _firestore.collection('chats').doc(chatId);
 
-      // Add message
-      final messageRef = _firestore
-          .collection('chats')
-          .doc(chatId)
-          .collection('messages')
-          .doc(message.id);
-      batch.set(messageRef, message.toFirestore());
+      // Build effective recipient list — always exclude the sender
+      List<String> effectiveOtherIds = otherParticipantIds
+          .where((id) => id.isNotEmpty && id != message.senderId)
+          .toList();
 
-      // Build unread count increments for all other participants
-      final Map<String, dynamic> unreadIncrements = {};
-      for (final uid in otherParticipantIds) {
-        if (uid != message.senderId) {
-          unreadIncrements['unreadCount.$uid'] = FieldValue.increment(1);
+      // If still empty, fetch participant IDs directly from Firestore
+      if (effectiveOtherIds.isEmpty) {
+        final chatDoc = await chatRef.get();
+        if (chatDoc.exists) {
+          final data = chatDoc.data() as Map<String, dynamic>;
+          // Try participantIds array first
+          var ids = List<String>.from(data['participantIds'] ?? []);
+          // Fall back to participants sub-objects
+          if (ids.isEmpty && data['participants'] is List) {
+            ids = (data['participants'] as List)
+                .map((p) => ((p as Map<String, dynamic>)['id'] as String?) ?? '')
+                .where((id) => id.isNotEmpty)
+                .toList();
+          }
+          effectiveOtherIds = ids
+              .where((id) => id.isNotEmpty && id != message.senderId)
+              .toList();
         }
       }
 
-      // Update chat's last message, timestamp, and unread counts
-      final chatRef = _firestore.collection('chats').doc(chatId);
+      final batch = _firestore.batch();
+
+      // Add message document
+      final messageRef = chatRef.collection('messages').doc(message.id);
+      batch.set(messageRef, message.toFirestore());
+
+      // Update lastMessage + timestamp + ensure participantIds is always written
       batch.set(chatRef, {
         'lastMessage': message.toMap(),
         'updatedAt': FieldValue.serverTimestamp(),
-        ...unreadIncrements,
+        // Ensure participantIds exists so future unread lookups work
+        if (effectiveOtherIds.isNotEmpty)
+          'participantIds': [message.senderId, ...effectiveOtherIds],
       }, SetOptions(merge: true));
 
       await batch.commit();
+
+      // Increment unread counts via update() — dot notation only works in update()
+      if (effectiveOtherIds.isNotEmpty) {
+        final Map<String, dynamic> unreadIncrements = {};
+        for (final uid in effectiveOtherIds) {
+          unreadIncrements['unreadCount.$uid'] = FieldValue.increment(1);
+        }
+        await chatRef.update(unreadIncrements);
+        debugPrint('FirestoreService: Incremented unread for $effectiveOtherIds in chat $chatId');
+      } else {
+        debugPrint('FirestoreService: WARNING — no recipients found to increment unread for chat $chatId');
+      }
     } catch (e) {
       debugPrint('Error sending message: $e');
       rethrow;
@@ -189,6 +217,7 @@ class FirestoreService {
     try {
       await _firestore.collection('chats').doc(chatId).update({
         'unreadCount.$userId': 0,
+        'lastMessage.status': 3, // MessageStatus.read index
       });
     } catch (e) {
       debugPrint('Error marking messages as read: $e');
