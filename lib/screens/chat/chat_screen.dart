@@ -27,6 +27,7 @@ import '../../widgets/poll_widget.dart';
 import '../../widgets/app_widgets.dart';
 import '../../widgets/gif_picker_sheet.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../../services/reminder_service.dart';
 
 class ChatScreen extends StatefulWidget {
   final String chatId;
@@ -144,6 +145,16 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     // Cancel any pending reset
     _resetTimer?.cancel();
 
+    // Trigger immediate 'waving' so Huggy reacts instantly while API loads
+    if (mounted) {
+      Provider.of<CharacterProvider>(context, listen: false).setMood('neutral');
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          Provider.of<CharacterProvider>(context, listen: false).setMood('happy');
+        }
+      });
+    }
+
     // Call AI Service
     String mood;
     if (text.toLowerCase().contains('kiss')) {
@@ -151,9 +162,9 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     } else {
       mood = await _aiService.analyzeSentiment(text);
     }
-    
+
     if (_disposed || !mounted) return;
-    
+
     Provider.of<CharacterProvider>(context, listen: false).setMood(mood);
 
     // Auto-Reset to Neutral after 3 seconds if not already neutral
@@ -589,74 +600,255 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   }
 
   void _showMessageActions(BuildContext context, MessageModel message) {
-    showModalBottomSheet(
+    final isMe = message.senderId == 'me' ||
+        message.senderId ==
+            Provider.of<ChatProvider>(context, listen: false).currentUserId;
+
+    showGeneralDialog(
       context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => GlassContainer(
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
-        blur: 25,
-        gradient: LinearGradient(
-          colors: [Colors.black.withOpacity(0.9), Colors.black.withOpacity(0.8)],
-        ),
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Emoji Reactions Row
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: ['❤️', '😂', '😮', '😢', '😡', '👍', '🙏', '🔥'].map((emoji) {
-                  return GestureDetector(
-                    onTap: () {
-                      Provider.of<ChatProvider>(context, listen: false)
-                          .addReaction(widget.chatId, message.id, emoji);
-                      Navigator.pop(context);
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      margin: const EdgeInsets.symmetric(horizontal: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.05),
-                        borderRadius: BorderRadius.circular(15),
-                      ),
-                      child: Text(emoji, style: const TextStyle(fontSize: 24)),
-                    ),
-                  );
-                }).toList(),
-              ),
+      barrierDismissible: true,
+      barrierLabel: 'dismiss',
+      barrierColor: Colors.transparent,
+      transitionDuration: const Duration(milliseconds: 180),
+      transitionBuilder: (_, anim, __, child) => FadeTransition(
+        opacity: anim,
+        child: ScaleTransition(
+            scale: Tween(begin: 0.95, end: 1.0).animate(anim), child: child),
+      ),
+      pageBuilder: (ctx, _, __) => _MessageActionOverlay(
+        message: message,
+        isMe: isMe,
+        chatId: widget.chatId,
+        chatName: widget.chatName,
+        onReply: () {
+          _safeSetState(() => _replyingTo = message);
+          _focusNode.requestFocus();
+        },
+        onTranslate: () => _translateMessage(message),
+        onSuggestSelect: (text) {
+          _messageController.text = text;
+          _focusNode.requestFocus();
+        },
+        onRemind: (DateTime at) => _scheduleReminder(message, at),
+        aiService: _aiService,
+      ),
+    );
+  }
+
+  Widget _divider() => const Divider(height: 1, color: Colors.white10, indent: 16, endIndent: 16);
+
+  Future<void> _translateMessage(MessageModel message) async {
+    if (message.content.isEmpty) return;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+    try {
+      final model = _aiService;
+      final prompt =
+          'Translate the following message to English. '
+          'If it is already in English, translate it to Arabic. '
+          'Return ONLY the translated text, nothing else.\n\n"${message.content}"';
+      final result = await model.freePrompt(prompt);
+      if (!mounted) return;
+      Navigator.pop(context); // close loader
+      showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          backgroundColor: const Color(0xFF1A1A2E),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Row(children: [
+            Icon(Icons.translate_rounded, color: Color(0xFF4ADE80)),
+            SizedBox(width: 8),
+            Text('Translation', style: TextStyle(color: Colors.white)),
+          ]),
+          content: Text(result, style: const TextStyle(color: Colors.white70, fontSize: 15)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close', style: TextStyle(color: Color(0xFF4ADE80))),
             ),
-            const SizedBox(height: 24),
-            ListTile(
-              leading: const Icon(Icons.reply_rounded, color: Colors.white),
-              title: const Text('Reply', style: TextStyle(color: Colors.white)),
-              onTap: () {
-                _safeSetState(() => _replyingTo = message);
-                Navigator.pop(context);
-                _focusNode.requestFocus();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.copy_rounded, color: Colors.white),
-              title: const Text('Copy Text', style: TextStyle(color: Colors.white)),
-              onTap: () {
-                // TODO: Clipboard
-                Navigator.pop(context);
-              },
-            ),
-            if (message.senderId == 'me')
-              ListTile(
-                leading: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent),
-                title: const Text('Delete', style: TextStyle(color: Colors.redAccent)),
-                onTap: () {
-                  // TODO: Delete
-                  Navigator.pop(context);
-                },
-              ),
-            const SizedBox(height: 20),
           ],
         ),
+      );
+    } catch (_) {
+      if (mounted) Navigator.pop(context);
+    }
+  }
+
+  Future<void> _suggestReply(MessageModel message) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+    try {
+      final prompt =
+          'Someone sent this message in a chat: "${message.content}"\n'
+          'Give me 3 short natural reply suggestions (1 line each). '
+          'Return them numbered 1. 2. 3. only, no extra text.';
+      final result = await _aiService.freePrompt(prompt);
+      if (!mounted) return;
+      Navigator.pop(context);
+
+      final suggestions = result
+          .split('\n')
+          .where((l) => l.trim().isNotEmpty)
+          .take(3)
+          .map((l) => l.replaceAll(RegExp(r'^\d+\.\s*'), '').trim())
+          .toList();
+
+      showModalBottomSheet(
+        context: context,
+        backgroundColor: const Color(0xFF1A1A2E),
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        builder: (_) => Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Row(children: [
+                Icon(Icons.auto_awesome_rounded, color: Color(0xFF60A5FA), size: 18),
+                SizedBox(width: 8),
+                Text('Suggested Replies',
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 15)),
+              ]),
+              const SizedBox(height: 16),
+              ...suggestions.map((s) => GestureDetector(
+                    onTap: () {
+                      Navigator.pop(context);
+                      _messageController.text = s;
+                      _focusNode.requestFocus();
+                    },
+                    child: Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.only(bottom: 10),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.07),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: Colors.white12),
+                      ),
+                      child: Text(s, style: const TextStyle(color: Colors.white, fontSize: 14)),
+                    ),
+                  )),
+            ],
+          ),
+        ),
+      );
+    } catch (_) {
+      if (mounted) Navigator.pop(context);
+    }
+  }
+
+  Future<void> _showReminderPicker(MessageModel message) async {
+    final now = DateTime.now();
+
+    // Quick preset options
+    final presets = [
+      ('In 30 minutes', now.add(const Duration(minutes: 30))),
+      ('In 1 hour', now.add(const Duration(hours: 1))),
+      ('In 3 hours', now.add(const Duration(hours: 3))),
+      ('Tomorrow morning', DateTime(now.year, now.month, now.day + 1, 9, 0)),
+      ('Custom time...', null as DateTime?),
+    ];
+
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1A1A2E),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(children: [
+              Icon(Icons.alarm_add_rounded, color: Color(0xFFFBBF24), size: 18),
+              SizedBox(width: 8),
+              Text('Remind Me Later',
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 15)),
+            ]),
+            const SizedBox(height: 6),
+            Text(
+              '"${message.content.length > 50 ? '${message.content.substring(0, 50)}…' : message.content}"',
+              style: const TextStyle(color: Colors.white38, fontSize: 12),
+            ),
+            const SizedBox(height: 16),
+            ...presets.map((preset) {
+              final (label, time) = preset;
+              return ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Container(
+                  width: 36, height: 36,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFBBF24).withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.alarm_rounded, color: Color(0xFFFBBF24), size: 18),
+                ),
+                title: Text(label, style: const TextStyle(color: Colors.white, fontSize: 14)),
+                subtitle: time != null
+                    ? Text(
+                        '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}',
+                        style: const TextStyle(color: Colors.white38, fontSize: 11),
+                      )
+                    : null,
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  if (time == null) {
+                    // Custom time picker
+                    final picked = await showTimePicker(
+                      context: context,
+                      initialTime: TimeOfDay.now(),
+                    );
+                    if (picked == null || !mounted) return;
+                    var scheduled = DateTime(now.year, now.month, now.day, picked.hour, picked.minute);
+                    if (scheduled.isBefore(now)) {
+                      scheduled = scheduled.add(const Duration(days: 1));
+                    }
+                    await _scheduleReminder(message, scheduled);
+                  } else {
+                    await _scheduleReminder(message, time);
+                  }
+                },
+              );
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _scheduleReminder(MessageModel message, DateTime at) async {
+    final granted = await ReminderService.requestPermission();
+    if (!granted || !mounted) return;
+
+    final preview = message.content.length > 60
+        ? '${message.content.substring(0, 60)}…'
+        : message.content;
+
+    await ReminderService.scheduleReminder(
+      id: message.id.hashCode.abs(),
+      title: '💬 Reminder from ${widget.chatName}',
+      body: preview,
+      scheduledTime: at,
+    );
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Reminder set for ${at.hour.toString().padLeft(2, '0')}:${at.minute.toString().padLeft(2, '0')}',
+        ),
+        backgroundColor: const Color(0xFFFBBF24),
+        behavior: SnackBarBehavior.floating,
       ),
     );
   }
@@ -1478,6 +1670,548 @@ class FullScreenGallery extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Telegram-style message action overlay ────────────────────────────────────
+class _MessageActionOverlay extends StatefulWidget {
+  final MessageModel message;
+  final bool isMe;
+  final String chatId;
+  final String chatName;
+  final VoidCallback onReply;
+  final VoidCallback onTranslate;
+  final void Function(String) onSuggestSelect;
+  final void Function(DateTime) onRemind;
+  final AiService aiService;
+
+  const _MessageActionOverlay({
+    required this.message,
+    required this.isMe,
+    required this.chatId,
+    required this.chatName,
+    required this.onReply,
+    required this.onTranslate,
+    required this.onSuggestSelect,
+    required this.onRemind,
+    required this.aiService,
+  });
+
+  @override
+  State<_MessageActionOverlay> createState() => _MessageActionOverlayState();
+}
+
+class _MessageActionOverlayState extends State<_MessageActionOverlay> {
+  bool _showReminder = false;
+  bool _showSuggest = false;
+  bool _loadingSuggestions = false;
+  bool _suggestError = false;
+  List<String> _suggestions = [];
+
+  static const _presets = [
+    ('In 30 minutes', Duration(minutes: 30)),
+    ('In 1 hour',     Duration(hours: 1)),
+    ('In 3 hours',    Duration(hours: 3)),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => Navigator.pop(context),
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Container(
+            color: Colors.black.withOpacity(0.55),
+            child: SafeArea(
+              child: Center(
+                child: GestureDetector(
+                  onTap: () {},
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: widget.isMe
+                          ? CrossAxisAlignment.end
+                          : CrossAxisAlignment.start,
+                      children: [
+                        // Message bubble preview
+                        Container(
+                          constraints: BoxConstraints(
+                            maxWidth: MediaQuery.of(context).size.width * 0.72,
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 10),
+                          decoration: BoxDecoration(
+                            gradient: widget.isMe ? AppTheme.blueGradient : null,
+                            color: widget.isMe
+                                ? null
+                                : Colors.white.withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                          child: Text(
+                            widget.message.content,
+                            style: const TextStyle(
+                                color: Colors.white, fontSize: 14),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+
+                        // Emoji row — hidden when sub-view is open
+                        if (!_showReminder && !_showSuggest)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1F2937),
+                            borderRadius: BorderRadius.circular(28),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.4),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              ...['❤️', '👍', '👎', '🔥', '🥰', '👏', '😁']
+                                  .map((e) => GestureDetector(
+                                        onTap: () {
+                                          Provider.of<ChatProvider>(context,
+                                                  listen: false)
+                                              .addReaction(widget.chatId,
+                                                  widget.message.id, e);
+                                          Navigator.pop(context);
+                                        },
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 5),
+                                          child: Text(e,
+                                              style: const TextStyle(
+                                                  fontSize: 22)),
+                                        ),
+                                      )),
+                              Container(
+                                width: 1, height: 24,
+                                color: Colors.white12,
+                                margin:
+                                    const EdgeInsets.symmetric(horizontal: 4),
+                              ),
+                              const Icon(Icons.keyboard_arrow_down_rounded,
+                                  color: Colors.white54, size: 22),
+                            ],
+                          ),
+                        ),
+                        if (!_showReminder && !_showSuggest)
+                          const SizedBox(height: 8),
+
+                        // Card — switches between main menu, reminder, suggest
+                        AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 200),
+                          child: _showReminder
+                              ? _reminderCard()
+                              : _showSuggest
+                                  ? _suggestCard()
+                                  : _mainMenuCard(),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _mainMenuCard() {
+    return Container(
+      key: const ValueKey('main'),
+      width: 220,
+      decoration: BoxDecoration(
+        color: const Color(0xFF1F2937),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.4),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _TgAction(
+            icon: Icons.reply_rounded,
+            label: 'Reply',
+            onTap: () {
+              Navigator.pop(context);
+              widget.onReply();
+            },
+          ),
+          _div(),
+          _TgAction(
+            icon: Icons.copy_rounded,
+            label: 'Copy',
+            onTap: () => Navigator.pop(context),
+          ),
+          _div(),
+          _TgAction(
+            icon: Icons.translate_rounded,
+            label: 'Translate',
+            onTap: () {
+              Navigator.pop(context);
+              widget.onTranslate();
+            },
+          ),
+          _div(),
+          _TgAction(
+            icon: Icons.auto_awesome_rounded,
+            label: 'Suggest Reply',
+            onTap: () {
+              setState(() => _showSuggest = true);
+              _fetchSuggestions();
+            },
+          ),
+          _div(),
+          _TgAction(
+            icon: Icons.alarm_add_rounded,
+            label: 'Remind Me Later',
+            onTap: () => setState(() => _showReminder = true),
+          ),
+          if (widget.isMe) ...[
+            _div(),
+            _TgAction(
+              icon: Icons.delete_outline_rounded,
+              label: 'Delete',
+              color: Colors.redAccent,
+              onTap: () => Navigator.pop(context),
+            ),
+          ],
+          _div(),
+          _TgAction(
+            icon: Icons.check_circle_outline_rounded,
+            label: 'Select',
+            onTap: () => Navigator.pop(context),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _fetchSuggestions() async {
+    setState(() {
+      _loadingSuggestions = true;
+      _suggestError = false;
+      _suggestions = [];
+    });
+    try {
+      final prompt =
+          'Someone sent this chat message: "${widget.message.content}"\n'
+          'Give exactly 3 short natural reply suggestions (max 10 words each).\n'
+          'Return ONLY the 3 replies, one per line, no numbering, no extra text.';
+      final text = await widget.aiService.freePrompt(prompt);
+      if (!mounted) return;
+      final lines = text
+          .split('\n')
+          .map((l) => l.trim())
+          .where((l) => l.isNotEmpty)
+          .take(3)
+          .toList();
+      setState(() {
+        _suggestions = lines;
+        _loadingSuggestions = false;
+        _suggestError = lines.isEmpty;
+      });
+    } catch (e) {
+      debugPrint('Suggest reply error: $e');
+      if (mounted) setState(() { _loadingSuggestions = false; _suggestError = true; });
+    }
+  }
+
+  Widget _suggestCard() {
+    return Container(
+      key: const ValueKey('suggest'),
+      width: 280,
+      decoration: BoxDecoration(
+        color: const Color(0xFF1F2937),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.4),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Header with back button
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+            child: Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                      color: Colors.white70, size: 16),
+                  onPressed: () => setState(() {
+                    _showSuggest = false;
+                    _suggestions = [];
+                    _suggestError = false;
+                  }),
+                  padding: EdgeInsets.zero,
+                  constraints:
+                      const BoxConstraints(minWidth: 32, minHeight: 32),
+                ),
+                const Icon(Icons.auto_awesome_rounded,
+                    color: Color(0xFF60A5FA), size: 15),
+                const SizedBox(width: 6),
+                const Text('Suggest Reply',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600)),
+              ],
+            ),
+          ),
+          _div(),
+          if (_loadingSuggestions)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    width: 22, height: 22,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Color(0xFF60A5FA)),
+                  ),
+                  SizedBox(height: 10),
+                  Text('Thinking...',
+                      style:
+                          TextStyle(color: Colors.white38, fontSize: 12)),
+                ],
+              ),
+            )
+          else if (_suggestError || _suggestions.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 18),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('Could not get suggestions.',
+                      style: TextStyle(color: Colors.white38, fontSize: 13)),
+                  const SizedBox(height: 10),
+                  GestureDetector(
+                    onTap: _fetchSuggestions,
+                    child: const Text('Try again',
+                        style: TextStyle(
+                            color: Color(0xFF60A5FA),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600)),
+                  ),
+                ],
+              ),
+            )
+          else
+            ..._suggestions.asMap().entries.map((entry) {
+              final i = entry.key;
+              final s = entry.value;
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  InkWell(
+                    onTap: () {
+                      Navigator.pop(context);
+                      widget.onSuggestSelect(s);
+                    },
+                    borderRadius: BorderRadius.circular(16),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 18, vertical: 13),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(s,
+                                style: const TextStyle(
+                                    color: Colors.white, fontSize: 14)),
+                          ),
+                          const Icon(Icons.send_rounded,
+                              color: Color(0xFF60A5FA), size: 16),
+                        ],
+                      ),
+                    ),
+                  ),
+                  if (i < _suggestions.length - 1) _div(),
+                ],
+              );
+            }),
+          const SizedBox(height: 4),
+        ],
+      ),
+    );
+  }
+
+  Widget _reminderCard() {
+    final now = DateTime.now();
+    return Container(
+      key: const ValueKey('reminder'),
+      width: 220,
+      decoration: BoxDecoration(
+        color: const Color(0xFF1F2937),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.4),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Header with back button
+          Padding(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+            child: Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                      color: Colors.white70, size: 16),
+                  onPressed: () => setState(() => _showReminder = false),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(
+                      minWidth: 32, minHeight: 32),
+                ),
+                const Text('Remind me',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600)),
+              ],
+            ),
+          ),
+          _div(),
+          // Presets
+          ..._presets.map((p) {
+            final (label, dur) = p;
+            final time = now.add(dur);
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _TgAction(
+                  icon: Icons.alarm_rounded,
+                  label: label,
+                  subtitle:
+                      '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}',
+                  onTap: () {
+                    Navigator.pop(context);
+                    widget.onRemind(time);
+                  },
+                ),
+                _div(),
+              ],
+            );
+          }),
+          // Tomorrow morning
+          _TgAction(
+            icon: Icons.wb_sunny_outlined,
+            label: 'Tomorrow morning',
+            subtitle: '09:00',
+            onTap: () {
+              final tomorrow = DateTime(
+                  now.year, now.month, now.day + 1, 9, 0);
+              Navigator.pop(context);
+              widget.onRemind(tomorrow);
+            },
+          ),
+          _div(),
+          // Custom time
+          _TgAction(
+            icon: Icons.schedule_rounded,
+            label: 'Custom time...',
+            onTap: () async {
+              Navigator.pop(context);
+              final picked = await showTimePicker(
+                context: context,
+                initialTime: TimeOfDay.now(),
+              );
+              if (picked == null) return;
+              var scheduled = DateTime(
+                  now.year, now.month, now.day,
+                  picked.hour, picked.minute);
+              if (scheduled.isBefore(now)) {
+                scheduled =
+                    scheduled.add(const Duration(days: 1));
+              }
+              widget.onRemind(scheduled);
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _div() => const Divider(
+      height: 1, color: Colors.white10, indent: 16, endIndent: 16);
+}
+
+class _TgAction extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String? subtitle;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _TgAction({
+    required this.icon,
+    required this.label,
+    this.subtitle,
+    this.color = Colors.white,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Padding(
+        padding:
+            const EdgeInsets.symmetric(horizontal: 18, vertical: 11),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(label,
+                      style: TextStyle(
+                          color: color,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w400)),
+                  if (subtitle != null)
+                    Text(subtitle!,
+                        style: const TextStyle(
+                            color: Colors.white38, fontSize: 11)),
+                ],
+              ),
+            ),
+            Icon(icon, color: color.withOpacity(0.65), size: 20),
+          ],
+        ),
       ),
     );
   }

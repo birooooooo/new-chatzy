@@ -128,10 +128,18 @@ class _Huggy3DCharacterState extends State<Huggy3DCharacter>
     final mood = widget.mood.toLowerCase();
     final isAction = _actionMoods.contains(mood);
 
-    if (isAction && _lastAnimatedMood != mood) {
+    if (mood == 'neutral') {
+      // Reset so the same mood can re-trigger next time
+      _lastAnimatedMood = null;
+      _isPlayingAction = false;
+      _playAnim(_idle, loop: true);
+      return;
+    }
+
+    if (isAction) {
       _lastAnimatedMood = mood;
       _playAction(_moodToAnim(mood), durationMs: _moodDuration(mood));
-    } else if (!isAction) {
+    } else {
       _isPlayingAction = false;
       _lastAnimatedMood = mood;
       _playAnim(_moodToAnim(mood), loop: true);

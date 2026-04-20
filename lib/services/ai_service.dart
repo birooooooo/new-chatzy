@@ -1,89 +1,111 @@
-import 'package:google_generative_ai/google_generative_ai.dart';
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 import '../models/message_model.dart';
 
 class AiService {
-  // ==========================================================
-  // REPLACE THE KEY BELOW WITH YOUR OWN GEMINI API KEY
-  // ==========================================================
-  static const String _apiKey = 'AIzaSyCcu3AuO1VSEdu75G4sLz3LgUVmwirtPis';
-  // ==========================================================
+  static const String _apiKey = 'sk_c66f5c63a239c9301738ee77b9107a9d';
+  static const String _model = 'mercury-2';
+  static const String _baseUrl = 'https://api.inceptionlabs.ai/v1/chat/completions';
 
-  late final GenerativeModel _model;
-  
-  // Mapping of fallback logic if AI fails or returns something unexpected
   static const List<String> _validMoods = [
-    'happy', 
-    'sad', 
-    'thinking', 
-    'waving', 
-    'surprised', 
-    'angry', 
-    'sleeping',
-    'neutral'
+    'happy', 'sad', 'thinking', 'waving', 'surprised', 'angry', 'sleeping', 'neutral'
   ];
 
-  static const String _primaryModel = 'gemini-2.0-flash';
+  Map<String, String> get _headers => {
+    'Authorization': 'Bearer $_apiKey',
+    'Content-Type': 'application/json',
+  };
 
-  AiService(); // No init here, we init on demand or try models in the method
+  Future<String> _call(String prompt, {String? system, int maxTokens = 512}) async {
+    final messages = <Map<String, String>>[];
+    if (system != null) messages.add({'role': 'system', 'content': system});
+    messages.add({'role': 'user', 'content': prompt});
+
+    final response = await http.post(
+      Uri.parse(_baseUrl),
+      headers: _headers,
+      body: jsonEncode({
+        'model': _model,
+        'max_tokens': maxTokens,
+        'messages': messages,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data['choices'][0]['message']['content'] as String? ?? '';
+    }
+    debugPrint('InceptionLabs API error ${response.statusCode}: ${response.body}');
+    throw Exception('API error ${response.statusCode}');
+  }
 
   /// Analyzes the text and returns one of the valid acting moods.
   Future<String> analyzeSentiment(String text) async {
     if (text.trim().isEmpty) return 'neutral';
-
     try {
-      final model = GenerativeModel(model: _primaryModel, apiKey: _apiKey);
-      final prompt = '''
-Classify the sentiment of the following chat message into exactly one of these categories:
-happy, sad, thinking, waving, surprised, angry, sleeping, neutral
-
-Message: "$text"
-
-Return ONLY the single category name in lowercase.''';
-      final response = await model.generateContent([Content.text(prompt)]);
-      return _parseMood(response.text?.trim().toLowerCase() ?? 'neutral');
-    } catch (e) {
-      // Silently fall back to keyword matching
+      final result = await _call(
+        'Classify the sentiment of the following chat message into exactly one of these categories:\n'
+        'happy, sad, thinking, waving, surprised, angry, sleeping, neutral\n\n'
+        'Message: "$text"\n\n'
+        'Return ONLY the single category name in lowercase.',
+      );
+      return _parseMood(result.trim().toLowerCase());
+    } catch (_) {
       return _parseMood(text.trim().toLowerCase());
     }
   }
 
   String _parseMood(String mood) {
-    if (_validMoods.contains(mood)) {
-      return mood;
-    }
-    // Fallback: simple string matching if AI returns something weird or if we are bypassing the AI
-      if (mood.contains('happy') || mood.contains('good') || mood.contains('great')) return 'happy';
-      if (mood.contains('sad') || mood.contains('bad')) return 'sad';
-      if (mood.contains('think') || mood.contains('how')) return 'thinking';
-      if (mood.contains('wav') || mood.contains('hi') || mood.contains('hello') || mood.contains('hey')) return 'waving';
-      if (mood.contains('surpris') || mood.contains('shock') || mood.contains('wow')) return 'surprised';
-      if (mood.contains('angr') || mood.contains('mad') || mood.contains('hate')) return 'angry';
-      if (mood.contains('sleep') || mood.contains('tired') || mood.contains('bored')) return 'sleeping';
+    if (_validMoods.contains(mood)) return mood;
+    if (mood.contains('happy') || mood.contains('good') || mood.contains('great')) return 'happy';
+    if (mood.contains('sad') || mood.contains('bad')) return 'sad';
+    if (mood.contains('think') || mood.contains('how')) return 'thinking';
+    if (mood.contains('wav') || mood.contains('hi') || mood.contains('hello') || mood.contains('hey')) return 'waving';
+    if (mood.contains('surpris') || mood.contains('shock') || mood.contains('wow')) return 'surprised';
+    if (mood.contains('angr') || mood.contains('mad') || mood.contains('hate')) return 'angry';
+    if (mood.contains('sleep') || mood.contains('tired') || mood.contains('bored')) return 'sleeping';
+    return 'neutral';
+  }
 
-      return 'neutral';
+  /// Send any free-form prompt and get a raw text response.
+  Future<String> freePrompt(String prompt) async {
+    return await _call(prompt, maxTokens: 512);
   }
 
   /// Generates a response from the AI based on user input and provided context.
   Future<String> getChatResponse(String input, List<MessageModel> history, String contextHistory) async {
     try {
-      final model = GenerativeModel(
-        model: _primaryModel,
-        apiKey: _apiKey,
-        systemInstruction: Content.system(
-          'You are CHATZY AI, a helpful personal assistant. '
-          'Context from user chats: $contextHistory '
-          'Keep responses concise, friendly, and professional.',
-        ),
+      final messages = <Map<String, String>>[
+        {
+          'role': 'system',
+          'content': 'You are CHATZY AI, a helpful personal assistant. '
+              'Context from user chats: $contextHistory '
+              'Keep responses concise, friendly, and professional.',
+        },
+      ];
+      for (final m in history.reversed) {
+        messages.add({
+          'role': m.senderId == 'me' ? 'user' : 'assistant',
+          'content': m.content,
+        });
+      }
+      messages.add({'role': 'user', 'content': input});
+
+      final response = await http.post(
+        Uri.parse(_baseUrl),
+        headers: _headers,
+        body: jsonEncode({'model': _model, 'max_tokens': 1024, 'messages': messages}),
       );
 
-      final contents = history.reversed.map((m) {
-        return Content(m.senderId == 'me' ? 'user' : 'model', [TextPart(m.content)]);
-      }).toList();
-      contents.add(Content('user', [TextPart(input)]));
-
-      final response = await model.generateContent(contents);
-      return response.text ?? "I'm not sure how to respond to that.";
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['choices'][0]['message']['content'] as String? ??
+            "I'm not sure how to respond to that.";
+      }
+      return "I'm having trouble connecting right now. Please try again.";
     } catch (e) {
+      debugPrint('getChatResponse error: $e');
       return "I'm having trouble connecting right now. Please try again.";
     }
   }
@@ -91,21 +113,16 @@ Return ONLY the single category name in lowercase.''';
   /// Summarizes a conversation list.
   Future<String> summarizeConversation(List<MessageModel> messages) async {
     if (messages.isEmpty) return "No messages to summarize.";
-
-    final conversationText = messages.reversed
+    final text = messages.reversed
         .map((m) => '${m.senderId == 'me' ? 'User' : 'Contact'}: ${m.content}')
         .join('\n');
-
     try {
-      final model = GenerativeModel(model: _primaryModel, apiKey: _apiKey);
-      final response = await model.generateContent([
-        Content.text(
-          'Summarize this chat into 3 bullet points. Be brief.\n\n$conversationText',
-        ),
-      ]);
-      return response.text ?? "Could not generate summary.";
-    } catch (e) {
-      return "• Could not summarize — AI unavailable.";
+      return await _call(
+        'Summarize this chat into 3 bullet points. Be brief.\n\n$text',
+        maxTokens: 256,
+      );
+    } catch (_) {
+      return '• Could not summarize — AI unavailable.';
     }
   }
 }

@@ -20,6 +20,7 @@ import 'dart:ui';
 
 import 'services/storage_service.dart';
 import 'services/database_service.dart';
+import 'services/reminder_service.dart';
 import 'firebase_options.dart';
 import 'models/user_model.dart'; // Add this import
 
@@ -28,6 +29,7 @@ void main() async {
   
   // Initialize Services
   await StorageService.init();
+  await ReminderService.init();
   if (!kIsWeb) {
     await DatabaseService.database; // Trigger init
   }

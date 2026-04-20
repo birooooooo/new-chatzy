@@ -24,6 +24,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final List<Widget> _screens = [
     const ChatsListScreen(),
     const ContactsScreen(),
+    const AiChatbotScreen(),
     const StoriesFeedScreen(),
     const SettingsScreen(),
   ];
@@ -31,6 +32,7 @@ class _HomeScreenState extends State<HomeScreen> {
   static const _navItems = [
     (Icons.chat_bubble_outline_rounded, 'Chats'),
     (Icons.call_outlined, 'Calls'),
+    (Icons.auto_awesome_rounded, 'AI'),
     (Icons.notifications_none_rounded, 'Updates'),
     (Icons.settings_outlined, 'Settings'),
   ];
@@ -49,25 +51,6 @@ class _HomeScreenState extends State<HomeScreen> {
             children: _screens,
           ),
 
-          // Bottom fade behind nav bar (gradient only — no BackdropFilter)
-          Positioned(
-            bottom: 0, left: 0, right: 0,
-            height: bottomPad + 62,
-            child: IgnorePointer(
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.bottomCenter,
-                    end: Alignment.topCenter,
-                    colors: [
-                      Colors.black.withOpacity(0.55),
-                      Colors.transparent,
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
 
           // Nav bar floating on top
           Positioned(
@@ -84,8 +67,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Padding(
       padding: EdgeInsets.only(
-        left: 40,
-        right: 40,
+        left: 24,
+        right: 24,
         bottom: bottomPadding + 14,
       ),
       child: Row(
