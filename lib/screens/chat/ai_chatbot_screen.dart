@@ -23,6 +23,11 @@ class _AiChatbotScreenState extends State<AiChatbotScreen> {
   final AiService _aiService = AiService();
   bool _isTyping = false;
 
+  // @ mention state
+  List<String> _mentionSuggestions = [];
+  String _mentionQuery = '';
+  OverlayEntry? _mentionOverlay;
+
   // Welcome Animation State
   String _welcomeText = "";
   int _currentMessageIndex = 0;
@@ -40,15 +45,120 @@ class _AiChatbotScreenState extends State<AiChatbotScreen> {
   void initState() {
     super.initState();
     _startWelcomeAnimation();
+    _controller.addListener(_onTextChanged);
   }
 
   @override
   void dispose() {
     _welcomeTimer?.cancel();
+    _removeMentionOverlay();
+    _controller.removeListener(_onTextChanged);
     _focusNode.dispose();
     _controller.dispose();
     _scrollController.dispose();
     super.dispose();
+  }
+
+  // ── @ mention logic ────────────────────────────────────────────────────────
+
+  void _onTextChanged() {
+    final text = _controller.text;
+    final cursor = _controller.selection.baseOffset;
+    if (cursor < 0) return;
+
+    // Find if cursor is right after an @ symbol
+    final textBeforeCursor = text.substring(0, cursor);
+    final atIndex = textBeforeCursor.lastIndexOf('@');
+    if (atIndex == -1) {
+      _removeMentionOverlay();
+      return;
+    }
+    // Only trigger if @ is at start or after a space
+    final charBefore = atIndex > 0 ? textBeforeCursor[atIndex - 1] : ' ';
+    if (charBefore != ' ' && charBefore != '\n') {
+      _removeMentionOverlay();
+      return;
+    }
+    final query = textBeforeCursor.substring(atIndex + 1);
+    // Stop if there's a space in the query (mention ended)
+    if (query.contains(' ')) {
+      _removeMentionOverlay();
+      return;
+    }
+    _mentionQuery = query;
+    _updateMentionSuggestions(query);
+  }
+
+  void _updateMentionSuggestions(String query) {
+    final chatProvider = Provider.of<ChatProvider>(context, listen: false);
+    final names = chatProvider.chats
+        .where((c) => c.name.isNotEmpty && c.name != 'AI')
+        .map((c) => c.name)
+        .where((n) => n.toLowerCase().startsWith(query.toLowerCase()))
+        .toList();
+
+    if (names.isEmpty) {
+      _removeMentionOverlay();
+      return;
+    }
+    setState(() => _mentionSuggestions = names);
+    _showMentionOverlay();
+  }
+
+  void _showMentionOverlay() {
+    _removeMentionOverlay();
+    final overlay = Overlay.of(context);
+    final renderBox = context.findRenderObject() as RenderBox?;
+    if (renderBox == null) return;
+
+    _mentionOverlay = OverlayEntry(
+      builder: (ctx) => _MentionSuggestionBox(
+        names: _mentionSuggestions,
+        onSelect: _insertMention,
+      ),
+    );
+    overlay.insert(_mentionOverlay!);
+  }
+
+  void _removeMentionOverlay() {
+    _mentionOverlay?.remove();
+    _mentionOverlay = null;
+    if (mounted) setState(() => _mentionSuggestions = []);
+  }
+
+  void _insertMention(String name) {
+    final text = _controller.text;
+    final cursor = _controller.selection.baseOffset;
+    if (cursor < 0) return;
+    final atIndex = text.lastIndexOf('@', cursor - 1);
+    if (atIndex == -1) return;
+    final newText = text.replaceRange(atIndex, cursor, '@$name ');
+    _controller.value = TextEditingValue(
+      text: newText,
+      selection: TextSelection.collapsed(offset: atIndex + name.length + 2),
+    );
+    _removeMentionOverlay();
+    _focusNode.requestFocus();
+  }
+
+  void _showContactPicker() {
+    final chatProvider = Provider.of<ChatProvider>(context, listen: false);
+    final names = chatProvider.chats
+        .where((c) => c.name.isNotEmpty && c.name != 'AI')
+        .map((c) => c.name)
+        .toList();
+    if (names.isEmpty) return;
+
+    // Insert @ at cursor to trigger the flow
+    final text = _controller.text;
+    final cursor = _controller.selection.baseOffset.clamp(0, text.length);
+    final prefix = cursor > 0 && text[cursor - 1] != ' ' ? ' @' : '@';
+    final newText = text.replaceRange(cursor, cursor, prefix);
+    _controller.value = TextEditingValue(
+      text: newText,
+      selection: TextSelection.collapsed(offset: cursor + prefix.length),
+    );
+    _focusNode.requestFocus();
   }
 
   void _startWelcomeAnimation() {
@@ -338,14 +448,7 @@ class _AiChatbotScreenState extends State<AiChatbotScreen> {
               children: [
                 // @ button
                 GestureDetector(
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Tagging feature coming soon!'),
-                        behavior: SnackBarBehavior.floating,
-                      ),
-                    );
-                  },
+                  onTap: _showContactPicker,
                   child: GlassContainer(
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                     borderRadius: BorderRadius.circular(20),
@@ -406,6 +509,80 @@ class _AiChatbotScreenState extends State<AiChatbotScreen> {
               ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Mention suggestion overlay ────────────────────────────────────────────────
+class _MentionSuggestionBox extends StatelessWidget {
+  final List<String> names;
+  final ValueChanged<String> onSelect;
+
+  const _MentionSuggestionBox({required this.names, required this.onSelect});
+
+  @override
+  Widget build(BuildContext context) {
+    final bottom = MediaQuery.of(context).padding.bottom + 84 + 80;
+    return Positioned(
+      bottom: bottom,
+      left: 24,
+      right: 24,
+      child: Material(
+        color: Colors.transparent,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+            child: Container(
+              constraints: const BoxConstraints(maxHeight: 220),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.10),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.white.withOpacity(0.18)),
+              ),
+              child: ListView.separated(
+                shrinkWrap: true,
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                itemCount: names.length,
+                separatorBuilder: (_, __) =>
+                    Divider(height: 1, color: Colors.white.withOpacity(0.08)),
+                itemBuilder: (_, i) => InkWell(
+                  onTap: () => onSelect(names[i]),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 28,
+                          height: 28,
+                          decoration: BoxDecoration(
+                            color: AppTheme.secondary.withOpacity(0.2),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Center(
+                            child: Text(
+                              names[i][0].toUpperCase(),
+                              style: const TextStyle(
+                                  color: AppTheme.secondary,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          names[i],
+                          style: const TextStyle(color: Colors.white, fontSize: 15),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );

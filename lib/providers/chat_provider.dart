@@ -107,9 +107,19 @@ class ChatProvider extends ChangeNotifier {
   /// Subscribe to messages for a specific chat
   void subscribeToMessages(String chatId, {bool autoMarkAsRead = false}) {
     if (_messageSubscriptions.containsKey(chatId)) return;
-    
+
     debugPrint('ChatProvider: Subscribing to messages for chat: $chatId');
-    
+
+    // Show local DB messages immediately while Firestore loads
+    if (_messages[chatId] == null || _messages[chatId]!.isEmpty) {
+      DatabaseService.getMessages(chatId).then((localMsgs) {
+        if (localMsgs.isNotEmpty && (_messages[chatId] == null || _messages[chatId]!.isEmpty)) {
+          _messages[chatId] = localMsgs;
+          notifyListeners();
+        }
+      }).catchError((_) {});
+    }
+
     _messageSubscriptions[chatId] = _firestoreService
         .getChatMessages(chatId)
         .listen((firestoreMessages) {
@@ -422,6 +432,16 @@ class ChatProvider extends ChangeNotifier {
       await _firestoreService.markMessagesAsRead(chatId, _currentUserId!);
     } catch (e) {
       debugPrint('ChatProvider: Failed to mark messages as read: $e');
+    }
+  }
+
+  Future<void> deleteMessage(String chatId, String messageId) async {
+    try {
+      await _firestoreService.deleteMessage(chatId, messageId);
+      _messages[chatId]?.removeWhere((m) => m.id == messageId);
+      notifyListeners();
+    } catch (e) {
+      debugPrint('ChatProvider: Error deleting message: $e');
     }
   }
 

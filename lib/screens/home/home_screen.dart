@@ -71,74 +71,77 @@ class _HomeScreenState extends State<HomeScreen> {
         right: 24,
         bottom: bottomPadding + 14,
       ),
-      child: Row(
-        children: [
-          // Floating pill nav
-          Expanded(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final itemCount = _navItems.length;
-                final itemWidth = constraints.maxWidth / itemCount;
-                // Clamp index for the pill (only 4 items now)
-                final pillIdx = _currentIndex.clamp(0, itemCount - 1);
-                final pillLeft = pillIdx * itemWidth + itemWidth * 0.06;
-                final pillWidth = itemWidth * 0.88;
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final itemCount = _navItems.length;
+          final itemWidth = constraints.maxWidth / itemCount;
+          final pillLeft = _currentIndex * itemWidth + itemWidth * 0.06;
+          final pillWidth = itemWidth * 0.88;
 
-                return Container(
-                  height: 56,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Colors.white.withOpacity(0.13),
-                        Colors.white.withOpacity(0.06),
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(36),
-                    border: Border.all(
-                      color: Colors.white.withOpacity(0.18),
-                      width: 1,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.35),
-                        blurRadius: 20,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
+          return ClipRRect(
+            borderRadius: BorderRadius.circular(36),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+              child: Container(
+                height: 56,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(36),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.18),
+                    width: 1,
                   ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(36),
-                    child: Stack(
-                      children: [
-                        // Selected pill
-                        AnimatedPositioned(
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.easeInOut,
-                          left: pillLeft,
-                          top: 5,
-                          width: pillWidth,
-                          height: 46,
-                          child: _GlassPill(),
-                        ),
-                        // Icons & labels
-                        Positioned.fill(
-                          child: Row(
-                            children: [
-                              for (int i = 0; i < _navItems.length; i++)
-                                Expanded(child: _buildNavItem(i)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.3),
+                      blurRadius: 20,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: Stack(
+                  children: [
+                    // Top shimmer highlight
+                    Positioned(
+                      top: 0, left: 0, right: 0,
+                      height: 1,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Colors.transparent,
+                              Colors.white.withOpacity(0.35),
+                              Colors.transparent,
                             ],
                           ),
                         ),
-                      ],
+                      ),
                     ),
-                  ),
-                );
-              },
+                    // Selected pill
+                    AnimatedPositioned(
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
+                      left: pillLeft,
+                      top: 5,
+                      width: pillWidth,
+                      height: 46,
+                      child: _GlassPill(),
+                    ),
+                    // Icons & labels
+                    Positioned.fill(
+                      child: Row(
+                        children: [
+                          for (int i = 0; i < _navItems.length; i++)
+                            Expanded(child: _buildNavItem(i)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
@@ -204,49 +207,46 @@ class _GlassPill extends StatelessWidget {
   Widget build(BuildContext context) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(26),
-      child: Stack(
-          children: [
-            Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(26),
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Colors.white.withOpacity(0.22),
-                    Colors.white.withOpacity(0.07),
-                  ],
-                ),
-                border: Border.all(
-                  color: Colors.white.withOpacity(0.25),
-                  width: 1,
-                ),
-              ),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(26),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Colors.white.withOpacity(0.22),
+                Colors.white.withOpacity(0.07),
+              ],
             ),
-            // Top lens glow
-            Positioned(
-              top: -6,
-              left: 14,
-              right: 14,
-              height: 26,
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  gradient: RadialGradient(
-                    center: Alignment.topCenter,
-                    radius: 0.85,
-                    colors: [
-                      Colors.white.withOpacity(0.7),
-                      Colors.white.withOpacity(0.2),
-                      Colors.transparent,
-                    ],
-                    stops: const [0.0, 0.45, 1.0],
+            border: Border.all(
+              color: Colors.white.withOpacity(0.25),
+              width: 1,
+            ),
+          ),
+          child: Stack(
+            children: [
+              // Top specular highlight
+              Positioned(
+                top: 0, left: 10, right: 10, height: 1,
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.transparent,
+                        Colors.white.withOpacity(0.6),
+                        Colors.transparent,
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
+      ),
     );
   }
 }
+

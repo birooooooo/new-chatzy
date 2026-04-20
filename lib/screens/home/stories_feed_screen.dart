@@ -196,9 +196,7 @@ class _StoriesFeedScreenState extends State<StoriesFeedScreen> {
                       mock: mock,
                       index: index,
                       allItems: _viewerItems,
-                    ).animate()
-                      .fadeIn(delay: Duration(milliseconds: 120 + (index * 50)))
-                      .scale(begin: const Offset(0.92, 0.92), end: const Offset(1, 1));
+                    );
                   },
                   childCount: _mockDiscover.length,
                 ),

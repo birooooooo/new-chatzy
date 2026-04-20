@@ -62,6 +62,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   final AiService _aiService = AiService();
   Timer? _debounceTimer;
   Timer? _resetTimer;
+  String? _lastSeenPartnerId; // tracks last partner message to detect new ones
   
   // Messages now come from ChatProvider
   final List<String> _suggestions = [
@@ -260,8 +261,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       _safeSetState(() => _hasStartedChatting = true);
     }
 
-    // Trigger immediate analysis on send to capture the final sentiment
-    _analyzeMood(_messageController.text);
+    // Mood analysis now triggered by partner messages, not self
 
     final chatProvider = Provider.of<ChatProvider>(context, listen: false);
     chatProvider.addMessage(
@@ -398,6 +398,20 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                 child: Consumer<ChatProvider>(
                   builder: (context, chatProvider, child) {
                     final messages = chatProvider.getMessages(widget.chatId);
+
+                    // Detect new incoming partner message
+                    if (messages.isNotEmpty) {
+                      final latest = messages.first;
+                      final myId = chatProvider.currentUserId ?? 'me';
+                      if (latest.senderId != myId &&
+                          latest.id != _lastSeenPartnerId) {
+                        _lastSeenPartnerId = latest.id;
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (mounted) _analyzeMood(latest.content);
+                        });
+                      }
+                    }
+
                     return _buildMessagesList(messages);
                   },
                 ),
@@ -568,6 +582,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
         return SwipeToReply(
           onReply: () => _safeSetState(() => _replyingTo = message),
+          onDelete: () => _confirmDelete(context, message),
           child: GestureDetector(
             onLongPress: () => _showMessageActions(context, message),
             child: _GlassMessageBubble(
@@ -597,6 +612,35 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         ).animate().fadeIn(duration: 200.ms).slideY(begin: 0.1, end: 0);
       },
     );
+  }
+
+  Future<void> _confirmDelete(BuildContext context, MessageModel message) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E1E2E),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Delete message?',
+            style: TextStyle(color: Colors.white, fontSize: 16)),
+        content: const Text('This message will be deleted for everyone.',
+            style: TextStyle(color: Colors.white60, fontSize: 13)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('No', style: TextStyle(color: Colors.white54)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Yes', style: TextStyle(color: Colors.redAccent)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted) {
+      Provider.of<ChatProvider>(context, listen: false)
+          .deleteMessage(widget.chatId, message.id);
+    }
   }
 
   void _showMessageActions(BuildContext context, MessageModel message) {
@@ -1887,15 +1931,41 @@ class _MessageActionOverlayState extends State<_MessageActionOverlay> {
             label: 'Remind Me Later',
             onTap: () => setState(() => _showReminder = true),
           ),
-          if (widget.isMe) ...[
-            _div(),
-            _TgAction(
-              icon: Icons.delete_outline_rounded,
-              label: 'Delete',
-              color: Colors.redAccent,
-              onTap: () => Navigator.pop(context),
-            ),
-          ],
+          _div(),
+          _TgAction(
+            icon: Icons.delete_outline_rounded,
+            label: 'Delete',
+            color: Colors.redAccent,
+            onTap: () async {
+              Navigator.pop(context);
+              final confirmed = await showDialog<bool>(
+                context: context,
+                barrierDismissible: true,
+                builder: (ctx) => AlertDialog(
+                  backgroundColor: const Color(0xFF1E1E2E),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  title: const Text('Delete message?',
+                      style: TextStyle(color: Colors.white, fontSize: 16)),
+                  content: const Text('This message will be deleted for everyone.',
+                      style: TextStyle(color: Colors.white60, fontSize: 13)),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx, false),
+                      child: const Text('No', style: TextStyle(color: Colors.white54)),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx, true),
+                      child: const Text('Yes', style: TextStyle(color: Colors.redAccent)),
+                    ),
+                  ],
+                ),
+              );
+              if (confirmed == true && context.mounted) {
+                Provider.of<ChatProvider>(context, listen: false)
+                    .deleteMessage(widget.chatId, widget.message.id);
+              }
+            },
+          ),
           _div(),
           _TgAction(
             icon: Icons.check_circle_outline_rounded,
