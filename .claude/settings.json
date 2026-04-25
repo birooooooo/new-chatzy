@@ -6,6 +6,9 @@
       "Bash(python inspect_huggy.py)",
       "Bash(python create_wave_anim.py)",
       "Bash(python make_flowchart.py)"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\berha\\Desktop"
     ]
   }
 }

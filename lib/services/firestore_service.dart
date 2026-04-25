@@ -60,6 +60,23 @@ class FirestoreService {
   
   // ===== MESSAGE OPERATIONS =====
   
+  /// Fetch messages for a chat once (no stream) — used for @ mention AI context
+  Future<List<MessageModel>> fetchChatMessagesOnce(String chatId, {int limit = 50}) async {
+    try {
+      final snap = await _firestore
+          .collection('chats')
+          .doc(chatId)
+          .collection('messages')
+          .orderBy('timestamp', descending: true)
+          .limit(limit)
+          .get();
+      return snap.docs.map((doc) => MessageModel.fromFirestore(doc)).toList();
+    } catch (e) {
+      debugPrint('fetchChatMessagesOnce error: $e');
+      return [];
+    }
+  }
+
   /// Get messages for a chat as real-time stream
   Stream<List<MessageModel>> getChatMessages(String chatId) {
     return _firestore

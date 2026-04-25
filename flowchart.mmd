@@ -1,0 +1,67 @@
+flowchart TD
+    A([App Start]) --> B[main.dart\nMultiProvider Setup]
+    B --> C{AuthWrapper\nStreamBuilder}
+
+    C --> D[SplashScreen\n3.5s animation]
+    D --> C
+
+    C -->|Not Authenticated| E[LoginScreen]
+    E -->|Sign Up| F[RegisterScreen]
+    F -->|Back| E
+    E -->|Forgot Password| G[Password Reset Dialog]
+    G --> E
+
+    C -->|Authenticated| H
+
+    subgraph H[HomeScreen - Bottom Navigation]
+        direction TB
+        NAV[Glass Pill NavBar\n5 Tabs]
+    end
+
+    H --> TAB0[Tab 0\nChatsListScreen]
+    H --> TAB1[Tab 1\nContactsScreen]
+    H --> TAB2[Tab 2\nAI ChatbotScreen]
+    H --> TAB3[Tab 3\nStoriesFeedScreen]
+    H --> TAB4[Tab 4\nSettingsScreen]
+
+    TAB0 --> SEARCH0[Search and Filter\nAll / Favorites / Work / Groups]
+    TAB0 --> STORIES_C[Story Carousel]
+    STORIES_C --> STORY_V[StoryViewerScreen\nPageController swipe]
+    TAB0 -->|One-on-one| CHAT[ChatScreen\nchatId, chatName, isOnline]
+    TAB0 -->|Group| GCHAT[GroupChatScreen\nchatId, groupName]
+
+    CHAT --> CHAT_SET[ChatSettingsScreen]
+    CHAT --> USR_DET[UserDetailsScreen]
+    CHAT --> MEDIA[MediaGalleryScreen]
+    CHAT --> CHAT_SRCH[ChatSearchScreen]
+    USR_DET -->|Block| BLOCK[BlockListScreen]
+
+    TAB1 --> SEARCH1[Search Users\nmin 2 chars]
+    SEARCH1 -->|Select User| CHAT
+
+    TAB2 --> AI_CHAT[AI Chat\nTypewriter welcome\n@ mention suggestions]
+
+    TAB3 --> CREATE_S[CreateStoryScreen\nText / Image / Video]
+    TAB3 --> STORY_V
+
+    TAB4 --> PROFILE[ProfileScreen]
+    PROFILE --> EDIT_P[EditProfileScreen]
+    TAB4 --> AI_SET[AiAccountSettingsScreen]
+    TAB4 --> NOTIF[NotificationsSettingsScreen]
+    TAB4 --> PRIV[PrivacySettingsScreen]
+    TAB4 --> THEME[ThemeSettingsScreen]
+    TAB4 --> ABOUT[AboutScreen]
+    TAB4 -->|Logout| E
+
+    style A fill:#6C63FF,color:#fff,stroke:none
+    style E fill:#FF6584,color:#fff,stroke:none
+    style F fill:#FF6584,color:#fff,stroke:none
+    style D fill:#43CBFF,color:#000,stroke:none
+    style CHAT fill:#4CAF50,color:#fff,stroke:none
+    style GCHAT fill:#4CAF50,color:#fff,stroke:none
+    style AI_CHAT fill:#FF9800,color:#fff,stroke:none
+    style TAB0 fill:#2d2d3f,color:#fff,stroke:#6C63FF
+    style TAB1 fill:#2d2d3f,color:#fff,stroke:#6C63FF
+    style TAB2 fill:#2d2d3f,color:#fff,stroke:#FF9800
+    style TAB3 fill:#2d2d3f,color:#fff,stroke:#6C63FF
+    style TAB4 fill:#2d2d3f,color:#fff,stroke:#6C63FF

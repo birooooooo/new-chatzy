@@ -468,6 +468,58 @@ class ChatProvider extends ChangeNotifier {
     }
   }
 
+  /// Fetch full conversation history for a contact by display name.
+  /// Used by the AI chatbot @ mention to inject real chat context.
+  Future<String> fetchContactHistory(String contactName) async {
+    // Find the matching chat
+    final uid = _currentUserId ?? '';
+    final chat = _chats.firstWhere(
+      (c) => !c.isAI &&
+          c.getDisplayName(uid).toLowerCase() == contactName.toLowerCase(),
+      orElse: () => _chats.firstWhere(
+        (c) => !c.isAI &&
+            c.getDisplayName(uid)
+                .toLowerCase()
+                .startsWith(contactName.toLowerCase()),
+        orElse: () => _chats.firstWhere(
+          (c) => !c.isAI &&
+              c.getDisplayName(uid)
+                  .toLowerCase()
+                  .contains(contactName.toLowerCase()),
+          orElse: () => ChatModel(
+              id: '', name: '', participants: []),
+        ),
+      ),
+    );
+
+    if (chat.id.isEmpty) {
+      return 'No conversation found with "$contactName".';
+    }
+
+    final displayName = chat.getDisplayName(uid);
+
+    // Try in-memory first, fetch from Firestore if empty
+    List<MessageModel> msgs = _messages[chat.id] ?? [];
+    if (msgs.isEmpty) {
+      msgs = await _firestoreService.fetchChatMessagesOnce(chat.id, limit: 50);
+      if (msgs.isNotEmpty) {
+        _messages[chat.id] = msgs;
+      }
+    }
+
+    if (msgs.isEmpty) {
+      return 'No messages found in your conversation with "$displayName".';
+    }
+
+    // Build readable transcript (chronological order)
+    final transcript = msgs.reversed.map((m) {
+      final sender = m.senderId == uid ? 'Me' : displayName;
+      return '$sender: ${m.content}';
+    }).join('\n');
+
+    return 'Full conversation between Me and $displayName:\n$transcript';
+  }
+
   String getAllChatsContext() {
     StringBuffer context = StringBuffer();
     context.writeln("User's Conversation History Context:");
